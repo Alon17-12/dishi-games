@@ -1,7 +1,7 @@
 // dishi-games/leaderboard.js
 import { db } from './firebase-config.js';
 import {
-  doc, setDoc, collection, runTransaction,
+  doc, collection, runTransaction,
   query, orderBy, limit, onSnapshot, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
