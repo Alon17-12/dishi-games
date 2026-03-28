@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>דיש תלוי 🔤</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: #1a1a0e;
+      color: #e8e0b0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+      user-select: none;
+    }
+    h1 { color:#c8e060; font-size:1.4rem; margin-bottom:4px; }
+    #score-area { color:#a0b060; font-size:0.9rem; margin-bottom:12px; }
+    /* Dishi reveal image */
+    #dishi-container {
+      position: relative;
+      width: 160px;
+      height: 180px;
+      margin-bottom: 12px;
+    }
+    #dishi-img {
+      width: 160px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 2px solid rgba(160,180,80,0.4);
+    }
+    #dishi-overlay {
+      position: absolute;
+      inset: 0;
+      background: #1a1a0e;
+      border-radius: 12px;
+      transition: opacity 0.5s;
+    }
+    /* Lives as hearts */
+    #lives { font-size:1.3rem; margin-bottom:10px; letter-spacing:2px; }
+    /* Word blanks */
+    #word-display {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 14px;
+      min-height: 40px;
+    }
+    .letter-box {
+      width: 28px;
+      border-bottom: 3px solid #a0c040;
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #e8e0b0;
+      height: 36px;
+      line-height: 36px;
+    }
+    /* Hint */
+    #hint-text { color:#8a9a50; font-size:0.85rem; margin-bottom:12px; min-height:18px; }
+    /* Keyboard */
+    #keyboard {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
+      max-width: 340px;
+      margin-bottom: 14px;
+    }
+    .key-btn {
+      background: rgba(70,90,30,0.6);
+      border: 1.5px solid rgba(120,160,40,0.4);
+      color: #d8e898;
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .key-btn:hover:not(:disabled) { background: rgba(100,140,40,0.8); }
+    .key-btn:disabled { opacity:0.25; cursor:default; }
+    .key-btn.wrong { background: rgba(180,50,30,0.5); border-color: rgba(200,80,60,0.5); }
+    /* Result overlay */
+    #result {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 10;
+    }
+    #result.show { display:flex; }
+    #result-title { font-size:2.2rem; }
+    #result-word { color:#c8e060; font-size:1.1rem; }
+    #result-score { color:#a0b060; font-size:0.95rem; }
+    .btn {
+      background: rgba(80,120,30,0.7);
+      color: #e8e0b0;
+      border: 1.5px solid rgba(160,180,80,0.5);
+      padding: 10px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size:1rem;
+      font-weight:bold;
+    }
+    .btn:hover { background: rgba(110,150,40,0.9); }
+  </style>
+</head>
+<body>
+<h1>🔤 דיש תלוי</h1>
+<div id="score-area">ניקוד: <span id="scoreDisplay">0</span></div>
+
+<div id="dishi-container">
+  <img id="dishi-img" src="../assets/dishi.png" alt="דישי">
+  <div id="dishi-overlay"></div>
+</div>
+
+<div id="lives">❤️❤️❤️❤️❤️❤️</div>
+<div id="word-display"></div>
+<div id="hint-text"></div>
+<div id="keyboard"></div>
+
+<div id="result">
+  <div id="result-title"></div>
+  <div id="result-word"></div>
+  <div id="result-score"></div>
+  <button class="btn" onclick="startNewRound()">משחק נוסף ▶</button>
+</div>
+
+<script type="module">
+import { saveScore } from '../leaderboard.js';
+import { auth } from '../firebase-config.js';
+
+// ── Word list: replace with real Dishi words before launch ──
+const WORDS = [
+  { word: 'דישי',      hint: 'הגיבור שלנו' },
+  { word: 'רספיה',     hint: 'המאכל האהוב' },
+  { word: 'פלאפל',     hint: 'מאכל ישראלי קלאסי' },
+  { word: 'ירושלים',   hint: 'עיר הבירה' },
+  { word: 'חומוס',     hint: 'ממרח פופולרי' },
+  { word: 'שוק',       hint: 'מקום קניות' },
+  { word: 'גריל',      hint: 'אופן בישול' },
+  { word: 'מנגל',      hint: 'מסורת ישראלית' },
+  { word: 'שישליק',    hint: 'בשר על שיפוד' },
+  { word: 'לחמנייה',   hint: 'מה שעוטף את הפלאפל' },
+  { word: 'טחינה',     hint: 'רוטב מפולי שומשום' },
+  { word: 'כבשים',     hint: 'חיות שמכאן מגיע הלשניצל' },
+  { word: 'חברים',     hint: 'מה שיש לדישי הרבה' },
+  { word: 'מוזיקה',    hint: 'דישי אוהב לשמוע' },
+  { word: 'מסיבה',     hint: 'היום הזה בגלל מה' },
+  { word: 'יומהולדת',  hint: 'אירוע מיוחד' },
+];
+
+const MAX_WRONG = 6;
+const ALEPH_BET = 'אבגדהוזחטיכלמנסעפצקרשת';
+
+let state = {
+  word: '', hint: '', guessed: new Set(),
+  wrongCount: 0, score: 0, roundScore: 0
+};
+
+function pickWord() {
+  return WORDS[Math.floor(Math.random() * WORDS.length)];
+}
+
+function startNewRound() {
+  const { word, hint } = pickWord();
+  state.guessed    = new Set();
+  state.wrongCount = 0;
+  state.roundScore = word.length * 10;
+  state.word = word;
+  state.hint = hint;
+  document.getElementById('result').classList.remove('show');
+  renderAll();
+}
+
+function renderAll() {
+  renderWord();
+  renderLives();
+  renderKeyboard();
+  renderOverlay();
+  document.getElementById('hint-text').textContent = `רמז: ${state.hint}`;
+  document.getElementById('scoreDisplay').textContent = state.score;
+}
+
+function renderWord() {
+  const display = document.getElementById('word-display');
+  display.innerHTML = state.word.split('').map(ch => {
+    const revealed = state.guessed.has(ch) || ch === ' ';
+    return `<div class="letter-box">${revealed ? ch : ''}</div>`;
+  }).join('');
+}
+
+function renderLives() {
+  const remaining = MAX_WRONG - state.wrongCount;
+  document.getElementById('lives').textContent =
+    '❤️'.repeat(remaining) + '🖤'.repeat(state.wrongCount);
+}
+
+function renderKeyboard() {
+  const kb = document.getElementById('keyboard');
+  kb.innerHTML = ALEPH_BET.split('').map(ch => {
+    const isGuessed = state.guessed.has(ch);
+    const isWrong   = isGuessed && !state.word.includes(ch);
+    return `<button
+      class="key-btn${isWrong ? ' wrong' : ''}"
+      ${isGuessed ? 'disabled' : ''}
+      onclick="guess('${ch}')">${ch}</button>`;
+  }).join('');
+}
+
+function renderOverlay() {
+  const overlay = document.getElementById('dishi-overlay');
+  // opacity 1 = dishi hidden, opacity 0 = dishi fully visible
+  const opacity = 1 - (state.wrongCount / MAX_WRONG);
+  overlay.style.opacity = opacity;
+}
+
+window.guess = (ch) => {
+  if (state.guessed.has(ch)) return;
+  state.guessed.add(ch);
+
+  if (!state.word.includes(ch)) {
+    state.wrongCount++;
+    state.roundScore = Math.max(0, state.roundScore - 15);
+  }
+
+  const wordChars  = new Set(state.word.replace(/ /g, '').split(''));
+  const allGuessed = [...wordChars].every(c => state.guessed.has(c));
+  const outOfLives = state.wrongCount >= MAX_WRONG;
+
+  if (allGuessed) {
+    state.score += state.roundScore;
+    showResult(true);
+  } else if (outOfLives) {
+    showResult(false);
+  } else {
+    renderAll();
+  }
+};
+
+function showResult(won) {
+  document.getElementById('result-title').textContent = won ? '🎉 כל הכבוד!' : '💔 אוי לא...';
+  document.getElementById('result-word').textContent  = `המילה הייתה: ${state.word}`;
+  document.getElementById('result-score').textContent = `ניקוד: ${state.score}`;
+  document.getElementById('result').classList.add('show');
+  if (won) {
+    saveScore('dishi-hangman', auth.currentUser, state.score);
+  }
+  renderAll();
+}
+
+window.startNewRound = startNewRound;
+
+// Start first round
+startNewRound();
+</script>
+</body>
+</html>
