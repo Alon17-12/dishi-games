@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Flying Dishi 🚀</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #2a2a1a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+        #gameWrapper { position: relative; }
+        canvas {
+            display: block;
+            border-radius: 10px;
+            box-shadow: 0 0 40px rgba(80,120,20,0.4);
+        }
+        #controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 7px 4px;
+            gap: 10px;
+        }
+        .ctrl-btn {
+            background: rgba(80,100,40,0.5);
+            color: #e8e0b0;
+            border: 2px solid rgba(160,180,80,0.5);
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+            white-space: nowrap;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .ctrl-btn:hover { background: rgba(100,130,50,0.7); }
+        .ctrl-btn.on { background: rgba(120,160,40,0.5); border-color: #a0c040; color: #ffffff; }
+        #imgUpload { display: none; }
+        #statusText {
+            color: rgba(200,210,150,0.5);
+            font-size: 11px;
+            text-align: center;
+            margin-top: 1px;
+        }
+    </style>
+</head>
+<body>
+<div id="gameWrapper">
+    <canvas id="gameCanvas"></canvas>
+    <div id="controls">
+        <label class="ctrl-btn" for="imgUpload">🖼️ תמונת דישי</label>
+        <input type="file" id="imgUpload" accept="image/*">
+        <button class="ctrl-btn" id="musicToggle">🔇 מוזיקה</button>
+    </div>
+    <div id="statusText">לחץ / הקש על הקנבס להתחיל</div>
+</div>
+
+<audio id="bgMusic" loop></audio>
+
+<script type="module">
+import { saveScore } from '../leaderboard.js';
+import { auth } from '../firebase-config.js';
+// ─── Responsive canvas ───────────────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+
+function resizeCanvas() {
+    const maxW = Math.min(window.innerWidth, 420);
+    const maxH = Math.min(window.innerHeight - 88, 680);
+    const aspect = 400 / 620;
+    let cw = maxW, ch = maxW / aspect;
+    if (ch > maxH) { ch = maxH; cw = ch * aspect; }
+    canvas.style.width  = cw + 'px';
+    canvas.style.height = ch + 'px';
+    canvas.width  = 400;
+    canvas.height = 620;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+const W = 400, H = 620;
+
+// ─── roundRect polyfill ──────────────────────────────────────────────────────
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (typeof r === 'number') r = [r,r,r,r];
+        const [tl,tr,br,bl] = r.length >= 4 ? r : [r[0],r[0],r[0],r[0]];
+        this.beginPath();
+        this.moveTo(x+tl, y); this.lineTo(x+w-tr, y);
+        this.quadraticCurveTo(x+w, y,   x+w, y+tr);
+        this.lineTo(x+w, y+h-br);
+        this.quadraticCurveTo(x+w, y+h, x+w-br, y+h);
+        this.lineTo(x+bl, y+h);
+        this.quadraticCurveTo(x, y+h, x, y+h-bl);
+        this.lineTo(x, y+tl);
+        this.quadraticCurveTo(x, y, x+tl, y);
+        this.closePath();
+    };
+}
+
+// ─── State ───────────────────────────────────────────────────────────────────
+const STATE = { MENU: 'menu', PLAYING: 'playing', DYING: 'dying', DEAD: 'dead' };
+let gameState = STATE.MENU;
+
+// ─── Death animation ──────────────────────────────────────────────────────────
+const DEATH_DUR   = 90;  // frames (~1.5s)
+const DRAIN       = { x: W/2, y: H/2 + 50 }; // spiral drain point
+let deathAnim     = { t: 0, startX: 0, startY: 0 };
+
+// ─── Bird ────────────────────────────────────────────────────────────────────
+const BIRD_R  = 34;
+const GRAVITY = 0.25;
+const FLAP_V  = -5.8;   // קפיצה קטנה יותר לרגישות גבוהה יותר
+let bird = { x: 90, y: H/2, vy: 0, flapAngle: 0 };
+
+// ─── Wave-based difficulty ────────────────────────────────────────────────────
+// עלייה כל 10 שלבים בדיוק. התחלה איטית ב-50% מהמהירות המקורית.
+const DIFFICULTY_LEVELS = [
+    { gap: 220, speed: 1.3,  dist: 280 },  // 0–9
+    { gap: 205, speed: 1.7,  dist: 268 },  // 10–19
+    { gap: 190, speed: 2.1,  dist: 258 },  // 20–29
+    { gap: 175, speed: 2.5,  dist: 248 },  // 30–39
+    { gap: 160, speed: 3.0,  dist: 238 },  // 40–49
+    { gap: 148, speed: 3.5,  dist: 228 },  // 50–59
+    { gap: 138, speed: 4.1,  dist: 220 },  // 60–69
+    { gap: 130, speed: 4.7,  dist: 215 },  // 70–79
+    { gap: 124, speed: 5.3,  dist: 210 },  // 80–89
+    { gap: 118, speed: 6.0,  dist: 206 },  // 90+
+];
+function getDifficulty(s) {
+    const idx = Math.min(Math.floor(s / 10), DIFFICULTY_LEVELS.length - 1);
+    return DIFFICULTY_LEVELS[idx];
+}
+
+// ─── Obstacles ───────────────────────────────────────────────────────────────
+const OBS_W     = 72;
+let obstacles   = [];
+const OBS_TYPES = ['soda','garbage','toilet','pot'];
+
+function makeDirtMarks() {
+    return Array.from({length: 12}, () => ({
+        ox: 6  + Math.random()*54, oy: 35 + Math.random()*160,
+        rx: 6  + Math.random()*12, ry: 3  + Math.random()*7,
+        angle: Math.random()*Math.PI,
+        a: 0.35 + Math.random()*0.45,
+    }));
+}
+
+// ─── Score ───────────────────────────────────────────────────────────────────
+let score     = 0;
+let highScore = parseInt(localStorage.getItem('flyingDishiHS') || '0');
+
+// ─── Image ───────────────────────────────────────────────────────────────────
+const dishiImg = new Image();
+let imgLoaded  = false;
+dishiImg.onload  = () => { imgLoaded = true; };
+dishiImg.onerror = () => { imgLoaded = false; };
+dishiImg.src = '../assets/dishi.png';
+
+// תמונת דישי קרב — למסך הפסילה
+const combatImg = new Image();
+let combatLoaded = false;
+combatImg.onload  = () => { combatLoaded = true; };
+combatImg.onerror = () => { combatLoaded = false; };
+combatImg.src = '../assets/dishi-combat.jpeg';
+
+document.getElementById('imgUpload').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    imgLoaded = false;
+    dishiImg.onload = () => { imgLoaded = true; };
+    dishiImg.src = URL.createObjectURL(f);
+    document.getElementById('statusText').textContent = '✅ תמונת דישי נטענה!';
+});
+
+// ─── Music (quieter) ─────────────────────────────────────────────────────────
+const bgMusic     = document.getElementById('bgMusic');
+const musicToggle = document.getElementById('musicToggle');
+let musicEnabled  = false;
+let musicLoaded   = false;
+
+bgMusic.volume = 0.32;   // ← הוחלש
+bgMusic.src    = "Dish-Dish Ninja Drum'n'Bass.mp3";
+bgMusic.oncanplaythrough = () => {
+    if (musicLoaded) return;
+    musicLoaded = true;
+    musicEnabled = true;
+    bgMusic.play().catch(() => {
+        musicEnabled = false;
+        musicToggle.textContent = '🔇 מוזיקה';
+        musicToggle.classList.remove('on');
+    });
+    musicToggle.textContent = '🔊 מוזיקה';
+    musicToggle.classList.add('on');
+};
+musicToggle.addEventListener('click', () => {
+    if (!musicLoaded) return;
+    musicEnabled = !musicEnabled;
+    musicEnabled ? bgMusic.play() : bgMusic.pause();
+    musicToggle.textContent = musicEnabled ? '🔊 מוזיקה' : '🔇 מוזיקה';
+    musicToggle.classList.toggle('on', musicEnabled);
+});
+
+// ─── Death Sound ─────────────────────────────────────────────────────────────
+const deathAudio = new Audio();
+['אפשר לקבל סודה.MP3','אפשר לקבל סודה.mp3'].forEach(f => {
+    const t = new Audio(f);
+    t.oncanplaythrough = () => { if (!deathAudio.src || deathAudio.readyState < 2) deathAudio.src = f; };
+});
+function playDeathSound() {
+    if (deathAudio.src) { deathAudio.currentTime = 0; deathAudio.play().catch(playDeathFallback); }
+    else playDeathFallback();
+}
+function playDeathFallback() {
+    try {
+        const ac = new (window.AudioContext||window.webkitAudioContext)();
+        [{f:520,t:0},{f:390,t:0.2},{f:280,t:0.4},{f:160,t:0.6}].forEach(({f,t}) => {
+            const o=ac.createOscillator(), g=ac.createGain();
+            o.connect(g); g.connect(ac.destination); o.type='sawtooth'; o.frequency.value=f;
+            const s=ac.currentTime+t;
+            g.gain.setValueAtTime(0.35,s); g.gain.exponentialRampToValueAtTime(0.001,s+0.35);
+            o.start(s); o.stop(s+0.4);
+        });
+    } catch(e){}
+}
+
+// ─── Military Background objects ─────────────────────────────────────────────
+const bgTanks    = Array.from({length:4}, (_,i) => ({ x: i*110+40,  speed: 0.22 }));
+const bgPlanes   = Array.from({length:3}, (_,i) => ({
+    x: i*160+60, y: 55+i*40, speed: 0.5+i*0.2, dir: i%2===0?1:-1, flip: i%2
+}));
+const bgMissiles = Array.from({length:2}, (_,i) => ({ x: i*220+80, speed: 0.16 }));
+const bgSmoke    = Array.from({length:6}, (_,i) => ({
+    x: i*70+20, y: H-130-Math.random()*40, life: Math.random(), speed: 0.008+Math.random()*0.005
+}));
+
+// ─── Clouds ──────────────────────────────────────────────────────────────────
+const clouds = [
+    {x:60, y:50, s:1.0}, {x:200,y:32,s:0.7}, {x:340,y:85,s:0.85},
+    {x:130,y:145,s:0.6}, {x:295,y:162,s:0.75},
+];
+
+// ─── Particles ───────────────────────────────────────────────────────────────
+let particles = [];
+function spawnParticles(bx, by) {
+    const cols = ['#ffd700','#ff6600','#ff3300','#ffffff','#ffaa00'];
+    for (let i=0;i<28;i++) {
+        const a=(Math.PI*2*i)/28+Math.random()*0.3, sp=2.5+Math.random()*4.5;
+        particles.push({x:bx,y:by,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,
+            life:1,color:cols[Math.floor(Math.random()*cols.length)],size:3+Math.random()*5});
+    }
+}
+
+// ─── Military Background Draw ─────────────────────────────────────────────────
+function drawMilitaryBase() {
+    // Desert sky gradient
+    const sky = ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,   '#4a5520');
+    sky.addColorStop(0.3, '#6b7a2a');
+    sky.addColorStop(0.6, '#8a9940');
+    sky.addColorStop(0.85,'#b5a55a');
+    sky.addColorStop(1,   '#c8a855');
+    ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+
+    // Distant haze / horizon glow
+    const haze = ctx.createLinearGradient(0, H-220, 0, H-140);
+    haze.addColorStop(0,'rgba(200,180,80,0)');
+    haze.addColorStop(1,'rgba(200,180,80,0.18)');
+    ctx.fillStyle = haze; ctx.fillRect(0,H-220,W,80);
+
+    // Distant silhouette hills
+    ctx.fillStyle = '#3a4218';
+    ctx.beginPath();
+    ctx.moveTo(0, H-130);
+    ctx.bezierCurveTo(60,H-175, 120,H-155, 180,H-170);
+    ctx.bezierCurveTo(240,H-185, 300,H-150, 360,H-165);
+    ctx.bezierCurveTo(390,H-172, 400,H-160, 400,H-130);
+    ctx.lineTo(0,H-130); ctx.closePath(); ctx.fill();
+
+    // Barracks building
+    ctx.fillStyle = '#4a5020';
+    ctx.fillRect(10, H-130, 70, 45);
+    ctx.fillStyle = '#3a4018';
+    ctx.fillRect(10, H-138, 70, 10);
+    // Windows
+    ctx.fillStyle = '#c8b860';
+    [[20,H-122],[38,H-122],[56,H-122]].forEach(([wx,wy])=>{
+        ctx.fillRect(wx,wy,8,10);
+        ctx.strokeStyle='#a09040'; ctx.lineWidth=1; ctx.strokeRect(wx,wy,8,10);
+    });
+    ctx.fillStyle = '#3a4018'; ctx.fillRect(30,H-108,16,18); // door
+
+    // Second barracks
+    ctx.fillStyle = '#424818';
+    ctx.fillRect(W-90, H-125, 90, 40);
+    ctx.fillStyle = '#323810';
+    ctx.fillRect(W-90, H-133, 90, 10);
+    [[W-80,H-118],[W-62,H-118],[W-44,H-118]].forEach(([wx,wy])=>{
+        ctx.fillStyle='#c8b860'; ctx.fillRect(wx,wy,8,10);
+        ctx.strokeStyle='#a09040'; ctx.lineWidth=1; ctx.strokeRect(wx,wy,8,10);
+    });
+    ctx.fillStyle = '#323810'; ctx.fillRect(W-56,H-105,16,18);
+
+    // Fence posts
+    ctx.strokeStyle = '#6a6040';
+    ctx.lineWidth = 2;
+    for (let fx=0; fx<W; fx+=22) {
+        ctx.beginPath(); ctx.moveTo(fx, H-74); ctx.lineTo(fx, H-60); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(0,H-70); ctx.lineTo(W,H-70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,H-64); ctx.lineTo(W,H-64); ctx.stroke();
+
+    // Smoke puffs (background atmosphere)
+    bgSmoke.forEach(s => {
+        s.life += s.speed;
+        if (s.life > 1) { s.life = 0; s.x = Math.random()*W; }
+        const a = Math.sin(s.life*Math.PI)*0.18;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#c8c090';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y - s.life*30, 12+s.life*8, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+    });
+
+    // Clouds (dusty)
+    clouds.forEach(c => drawDustCloud(c.x, c.y, c.s));
+    clouds.forEach(c => { c.x -= 0.25*c.s; if (c.x < -80) c.x = W+80; });
+
+    // Flying planes
+    bgPlanes.forEach(p => {
+        p.x += p.speed * p.dir;
+        if (p.dir === 1 && p.x > W+60) p.x = -60;
+        if (p.dir === -1 && p.x < -60) p.x = W+60;
+        drawBgPlane(p.x, p.y, p.flip);
+    });
+
+    // Ground
+    const gnd = ctx.createLinearGradient(0,H-62,0,H);
+    gnd.addColorStop(0,  '#8a7830');
+    gnd.addColorStop(0.4,'#7a6828');
+    gnd.addColorStop(1,  '#5a4a18');
+    ctx.fillStyle = gnd; ctx.fillRect(0,H-62,W,62);
+
+    // Ground texture lines
+    ctx.strokeStyle = 'rgba(100,80,20,0.3)';
+    ctx.lineWidth=1;
+    [H-50,H-40,H-28].forEach(ly=>{
+        ctx.beginPath(); ctx.moveTo(0,ly); ctx.lineTo(W,ly); ctx.stroke();
+    });
+
+    // Tanks on ground
+    bgTanks.forEach(t => {
+        t.x -= t.speed;
+        if (t.x < -80) t.x = W+80;
+        drawBgTank(t.x, H-62);
+    });
+
+    // Missile launchers
+    bgMissiles.forEach(m => {
+        m.x -= m.speed;
+        if (m.x < -60) m.x = W+60;
+        drawBgMissileLauncher(m.x, H-62);
+    });
+}
+
+function drawDustCloud(x, y, s) {
+    ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
+    ctx.fillStyle = 'rgba(210,195,130,0.15)';
+    ctx.beginPath();
+    ctx.arc(0,0,20,0,Math.PI*2); ctx.arc(22,-5,26,0,Math.PI*2);
+    ctx.arc(46,0,18,0,Math.PI*2); ctx.arc(32,12,20,0,Math.PI*2);
+    ctx.arc(12,12,18,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+}
+
+function drawBgTank(x, groundY) {
+    ctx.save(); ctx.translate(x, groundY);
+    // Body
+    ctx.fillStyle = '#4a5520';
+    ctx.roundRect(-28,-22,56,18,4); ctx.fill();
+    // Tracks
+    ctx.fillStyle = '#2a2a18';
+    ctx.roundRect(-30,-10,60,10,4); ctx.fill();
+    ctx.strokeStyle = '#1a1a10'; ctx.lineWidth=1.5;
+    for(let tx=-26;tx<30;tx+=8){
+        ctx.beginPath(); ctx.moveTo(tx,-10); ctx.lineTo(tx,0); ctx.stroke();
+    }
+    // Turret
+    ctx.fillStyle = '#5a6528';
+    ctx.roundRect(-14,-34,28,16,5); ctx.fill();
+    // Barrel
+    ctx.strokeStyle = '#3a4018'; ctx.lineWidth=5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(4,-28); ctx.lineTo(36,-28); ctx.stroke();
+    ctx.restore();
+}
+
+function drawBgPlane(x, y, flip) {
+    ctx.save(); ctx.translate(x, y);
+    if (flip) ctx.scale(-1,1);
+    ctx.fillStyle = '#6a7030';
+    // Fuselage
+    ctx.beginPath();
+    ctx.ellipse(0,0,22,6,0,0,Math.PI*2); ctx.fill();
+    // Wings
+    ctx.beginPath();
+    ctx.moveTo(-4,-5); ctx.lineTo(16,-5); ctx.lineTo(8,-18); ctx.closePath();
+    ctx.fillStyle = '#5a6028'; ctx.fill();
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(-18,-4); ctx.lineTo(-22,-12); ctx.lineTo(-12,-4); ctx.closePath();
+    ctx.fill();
+    // Cockpit
+    ctx.fillStyle = '#88aacc';
+    ctx.beginPath(); ctx.ellipse(8,0,6,4,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+}
+
+function drawBgMissileLauncher(x, groundY) {
+    ctx.save(); ctx.translate(x, groundY);
+    // Truck body
+    ctx.fillStyle = '#4a5520';
+    ctx.roundRect(-22,-18,44,18,3); ctx.fill();
+    // Wheels
+    ctx.fillStyle = '#1a1a10';
+    [-14,14].forEach(wx=>{
+        ctx.beginPath(); ctx.arc(wx,0,6,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#3a3a28'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(wx,0,4,0,Math.PI*2); ctx.stroke();
+    });
+    // Missile tube
+    ctx.fillStyle = '#708020';
+    ctx.save(); ctx.translate(0,-18); ctx.rotate(-0.35);
+    ctx.roundRect(-4,-22,8,22,2); ctx.fill();
+    // Warhead
+    ctx.fillStyle = '#c03020';
+    ctx.beginPath(); ctx.moveTo(-4,-22); ctx.lineTo(4,-22); ctx.lineTo(0,-32); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.restore();
+}
+
+// ─── CARTOON Obstacle Drawers ─────────────────────────────────────────────────
+// Bold outlines, simple clear shapes, exaggerated features
+
+function drawSodaBottle(x, y, height, isTop) {
+    if (height < 12) return;
+    ctx.save();
+    if (isTop) { ctx.translate(x+OBS_W/2,y+height); ctx.scale(1,-1); ctx.translate(-OBS_W/2,0); }
+    else ctx.translate(x, y);
+    const w=OBS_W, h=height;
+
+    // Body — bright green cartoon glass
+    ctx.fillStyle = '#2ecc40';
+    ctx.roundRect(6, 34, w-12, h-34, [0,0,12,12]);
+    ctx.fill();
+
+    // Dark glass tint overlay
+    ctx.fillStyle = 'rgba(0,60,0,0.35)';
+    ctx.roundRect(6, 34, w-12, h-34, [0,0,12,12]);
+    ctx.fill();
+
+    // White shine stripe
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.roundRect(10, 38, 10, h-46, [5,0,0,5]);
+    ctx.fill();
+
+    // Neck
+    ctx.fillStyle = '#27ae36';
+    ctx.roundRect(w*0.3, 14, w*0.4, 24, 4);
+    ctx.fill();
+
+    // Label — yellow sticker
+    const lh = Math.min(56, h-50);
+    if (lh > 14) {
+        ctx.fillStyle = '#ffe000';
+        ctx.roundRect(8, 46, w-16, lh, 6); ctx.fill();
+        ctx.strokeStyle = '#cc8800'; ctx.lineWidth = 2;
+        ctx.roundRect(8, 46, w-16, lh, 6); ctx.stroke();
+        // "סודה" text
+        ctx.fillStyle = '#cc0000';
+        ctx.font = `bold ${Math.min(14, lh*0.55)}px Arial`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('סודה', w/2, 46+lh/2);
+    }
+
+    // Bubbles
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    [[w-18,60],[w-22,75],[w-16,88]].forEach(([bx,by])=>{
+        if (by<h-8 && by>42) { ctx.beginPath(); ctx.arc(bx,by,3,0,Math.PI*2); ctx.fill(); }
+    });
+
+    // Crown cap — red
+    ctx.fillStyle = '#e60000';
+    ctx.roundRect(w*0.28, 0, w*0.44, 18, [7,7,2,2]); ctx.fill();
+    ctx.fillStyle = '#ff4444';
+    ctx.fillRect(w*0.3, 2, w*0.18, 6);
+
+    // Bold black outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3.5;
+    ctx.roundRect(6, 34, w-12, h-34, [0,0,12,12]); ctx.stroke();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+    ctx.roundRect(w*0.3, 14, w*0.4, 24, 4); ctx.stroke();
+    ctx.roundRect(w*0.28, 0, w*0.44, 18, [7,7,2,2]); ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawGarbageBag(x, y, height, isTop) {
+    if (height < 12) return;
+    ctx.save();
+    if (isTop) { ctx.translate(x+OBS_W/2,y+height); ctx.scale(1,-1); ctx.translate(-OBS_W/2,0); }
+    else ctx.translate(x, y);
+    const w=OBS_W, h=height;
+
+    // Bag body — dark green cartoon blob
+    ctx.fillStyle = '#1a7a22';
+    ctx.beginPath();
+    ctx.moveTo(w*0.2, h*0.08);
+    ctx.bezierCurveTo(-w*0.08, h*0.25, -w*0.08, h*0.8, w*0.1, h);
+    ctx.lineTo(w*0.9, h);
+    ctx.bezierCurveTo(w*1.08, h*0.8, w*1.08, h*0.25, w*0.8, h*0.08);
+    ctx.closePath();
+    ctx.fill();
+
+    // Lighter side sheen
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath();
+    ctx.moveTo(w*0.2, h*0.08);
+    ctx.bezierCurveTo(-w*0.08, h*0.25, -w*0.08, h*0.8, w*0.1, h);
+    ctx.lineTo(w*0.35, h); ctx.lineTo(w*0.3, h*0.08);
+    ctx.closePath(); ctx.fill();
+
+    // Wrinkle lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 2.5;
+    [[w*0.28,h*0.14,w*0.24,h*0.86],[w*0.50,h*0.10,w*0.50,h*0.90]].forEach(([sx,sy,ex,ey])=>{
+        ctx.beginPath(); ctx.moveTo(sx,sy);
+        ctx.bezierCurveTo(sx-5,h*0.5,ex+5,h*0.5,ex,ey); ctx.stroke();
+    });
+
+    // Twist tie — yellow
+    ctx.fillStyle = '#f9c020';
+    ctx.beginPath(); ctx.ellipse(w/2, h*0.07, w*0.2, h*0.04, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#d4960a';
+    ctx.beginPath(); ctx.ellipse(w/2, h*0.07, w*0.08, h*0.055, 0, 0, Math.PI*2); ctx.fill();
+
+    // Stink squiggles
+    ctx.strokeStyle = '#5dcc60'; ctx.lineWidth = 2; ctx.setLineDash([3,2]);
+    [[w*0.3,h*0.01],[w*0.5,-h*0.03],[w*0.7,h*0.01]].forEach(([sx,sy])=>{
+        ctx.beginPath(); ctx.moveTo(sx,sy);
+        ctx.bezierCurveTo(sx+5,sy-7,sx-3,sy-13,sx+3,sy-20); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Bold outline
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(w*0.2, h*0.08);
+    ctx.bezierCurveTo(-w*0.08, h*0.25, -w*0.08, h*0.8, w*0.1, h);
+    ctx.lineTo(w*0.9, h);
+    ctx.bezierCurveTo(w*1.08, h*0.8, w*1.08, h*0.25, w*0.8, h*0.08);
+    ctx.closePath(); ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawToiletRoll(x, y, height, isTop) {
+    if (height < 12) return;
+    ctx.save();
+    if (isTop) { ctx.translate(x+OBS_W/2,y+height); ctx.scale(1,-1); ctx.translate(-OBS_W/2,0); }
+    else ctx.translate(x, y);
+    const w=OBS_W, h=height;
+
+    // White paper body
+    ctx.fillStyle = '#f5f5f5';
+    ctx.roundRect(4, 0, w-8, h, 8); ctx.fill();
+
+    // Left/right cylinder shadows
+    const ls = ctx.createLinearGradient(4,0,18,0);
+    ls.addColorStop(0,'rgba(0,0,0,0.2)'); ls.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = ls; ctx.fillRect(4,0,14,h);
+    const rs = ctx.createLinearGradient(w-18,0,w-4,0);
+    rs.addColorStop(0,'rgba(0,0,0,0)'); rs.addColorStop(1,'rgba(0,0,0,0.2)');
+    ctx.fillStyle = rs; ctx.fillRect(w-18,0,14,h);
+
+    // Perforation lines
+    ctx.strokeStyle = '#b0b0b0'; ctx.lineWidth = 1.5; ctx.setLineDash([4,4]);
+    for (let py=38; py<h-8; py+=38) {
+        ctx.beginPath(); ctx.moveTo(4,py); ctx.lineTo(w-4,py); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Cardboard tube
+    const th = Math.min(32, h);
+    ctx.fillStyle = '#c8903a';
+    ctx.roundRect(10, h-th, w-20, th, [4,4,6,6]); ctx.fill();
+    // Tube ellipse top
+    ctx.fillStyle = '#b07830';
+    ctx.beginPath(); ctx.ellipse(w/2, h-th, (w-20)/2, 7, 0, 0, Math.PI*2); ctx.fill();
+    // Tube hole
+    ctx.fillStyle = '#7a4820';
+    ctx.beginPath(); ctx.ellipse(w/2, h-th, (w-36)/2, 4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#5a3010'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(w/2, h-th, (w-36)/2, 4, 0, 0, Math.PI*2); ctx.stroke();
+
+    // Loose end flap
+    if (h > 40) {
+        ctx.fillStyle = '#eeeeee';
+        ctx.beginPath(); ctx.moveTo(w-4,0); ctx.lineTo(w-4,22);
+        ctx.quadraticCurveTo(w+11,18,w+9,8); ctx.quadraticCurveTo(w+13,2,w-4,0); ctx.fill();
+        ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(w-4,0); ctx.lineTo(w-4,22);
+        ctx.quadraticCurveTo(w+11,18,w+9,8); ctx.quadraticCurveTo(w+13,2,w-4,0); ctx.stroke();
+    }
+
+    // Bold outline
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3.5;
+    ctx.roundRect(4, 0, w-8, h, 8); ctx.stroke();
+    ctx.strokeStyle = '#7a4820'; ctx.lineWidth = 2.5;
+    ctx.roundRect(10, h-th, w-20, th, [4,4,6,6]); ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawDirtyPot(x, y, height, isTop, dirtMarks) {
+    if (height < 12) return;
+    ctx.save();
+    if (isTop) { ctx.translate(x+OBS_W/2,y+height); ctx.scale(1,-1); ctx.translate(-OBS_W/2,0); }
+    else ctx.translate(x, y);
+    const w=OBS_W, h=height;
+
+    // Pot body — grey cartoon
+    ctx.fillStyle = '#888888';
+    ctx.beginPath();
+    ctx.moveTo(4, 30); ctx.lineTo(w-4, 30);
+    ctx.lineTo(w-8, h); ctx.lineTo(8, h);
+    ctx.closePath(); ctx.fill();
+
+    // Pot body shading
+    const shade = ctx.createLinearGradient(0,0,w,0);
+    shade.addColorStop(0,'rgba(0,0,0,0.25)');
+    shade.addColorStop(0.3,'rgba(255,255,255,0.1)');
+    shade.addColorStop(0.7,'rgba(255,255,255,0.05)');
+    shade.addColorStop(1,'rgba(0,0,0,0.2)');
+    ctx.fillStyle = shade;
+    ctx.beginPath();
+    ctx.moveTo(4,30); ctx.lineTo(w-4,30);
+    ctx.lineTo(w-8,h); ctx.lineTo(8,h); ctx.closePath(); ctx.fill();
+
+    // Dirt marks
+    (dirtMarks||[]).forEach(d => {
+        if (d.oy<h-4 && d.oy>32) {
+            ctx.save(); ctx.translate(d.ox,d.oy); ctx.rotate(d.angle);
+            ctx.fillStyle=`rgba(60,30,0,${d.a})`;
+            ctx.beginPath(); ctx.ellipse(0,0,d.rx,d.ry,0,0,Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+    });
+
+    // Scorch at bottom
+    if (h > 80) {
+        const sc = ctx.createLinearGradient(0,h-35,0,h);
+        sc.addColorStop(0,'rgba(0,0,0,0)'); sc.addColorStop(1,'rgba(0,0,0,0.5)');
+        ctx.fillStyle=sc;
+        ctx.beginPath(); ctx.moveTo(8,h-35); ctx.lineTo(w-8,h-35);
+        ctx.lineTo(w-8,h); ctx.lineTo(8,h); ctx.closePath(); ctx.fill();
+    }
+
+    // Lid
+    ctx.fillStyle = '#999999';
+    ctx.roundRect(-4, 18, w+8, 16, [3,3,0,0]); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(-4,18,w+8,4);
+
+    // Knob
+    ctx.fillStyle = '#bbbbbb';
+    ctx.roundRect(w/2-10, 6, 20, 15, 5); ctx.fill();
+    ctx.strokeStyle='#555'; ctx.lineWidth=2;
+    ctx.roundRect(w/2-10, 6, 20, 15, 5); ctx.stroke();
+
+    // Handles
+    ctx.fillStyle = '#999';
+    [-15,w+2].forEach(hx=>{ ctx.roundRect(hx,26,13,24,4); ctx.fill(); });
+
+    // Steam lines (wavy)
+    ctx.strokeStyle = 'rgba(220,220,220,0.7)'; ctx.lineWidth = 2;
+    ctx.setLineDash([2,3]);
+    [[w/2-8,6],[w/2,2],[w/2+8,6]].forEach(([sx,sy])=>{
+        ctx.beginPath(); ctx.moveTo(sx,sy);
+        ctx.bezierCurveTo(sx+5,sy-6,sx-4,sy-11,sx+3,sy-18); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Bold outline
+    ctx.strokeStyle='#000'; ctx.lineWidth=3.5;
+    ctx.beginPath(); ctx.moveTo(4,30); ctx.lineTo(w-4,30);
+    ctx.lineTo(w-8,h); ctx.lineTo(8,h); ctx.closePath(); ctx.stroke();
+    ctx.roundRect(-4,18,w+8,16,[3,3,0,0]); ctx.stroke();
+    [-15,w+2].forEach(hx=>{ ctx.roundRect(hx,26,13,24,4); ctx.stroke(); });
+
+    ctx.restore();
+}
+
+// ─── Dying bird (spiral flush animation) ─────────────────────────────────────
+function drawDyingBird() {
+    const prog  = deathAnim.t / DEATH_DUR;           // 0 → 1
+    const angle = prog * Math.PI * 10;               // 5 full rotations
+    const scale = Math.pow(1 - prog, 0.55);          // shrinks to 0
+    const r     = (1 - prog) * 55;                   // spiral radius shrinks
+    const bx    = deathAnim.startX + (DRAIN.x - deathAnim.startX) * prog + Math.cos(angle) * r;
+    const by    = deathAnim.startY + (DRAIN.y - deathAnim.startY) * prog + Math.sin(angle) * r;
+
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.rotate(angle);
+    ctx.scale(scale, scale);
+
+    // Photo clip
+    ctx.save();
+    ctx.beginPath(); ctx.arc(0, 0, BIRD_R, 0, Math.PI*2); ctx.clip();
+    if (imgLoaded) {
+        ctx.drawImage(dishiImg, -BIRD_R, -BIRD_R, BIRD_R*2, BIRD_R*2);
+    } else {
+        const fb = ctx.createRadialGradient(0,0,0,0,0,BIRD_R);
+        fb.addColorStop(0,'#ffe082'); fb.addColorStop(1,'#f9a825');
+        ctx.fillStyle=fb; ctx.fillRect(-BIRD_R,-BIRD_R,BIRD_R*2,BIRD_R*2);
+    }
+    ctx.restore();
+
+    ctx.strokeStyle='#ffd700'; ctx.lineWidth=3.5;
+    ctx.beginPath(); ctx.arc(0,0,BIRD_R,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+
+    // Drain swirl lines (appear around drain point as bird approaches)
+    if (prog > 0.4) {
+        const swA = Math.min(1, (prog-0.4)/0.3);
+        ctx.save(); ctx.globalAlpha = swA * 0.5;
+        ctx.strokeStyle = '#88aaff'; ctx.lineWidth = 2;
+        for (let i=0;i<3;i++) {
+            const sa = angle + i*(Math.PI*2/3);
+            ctx.beginPath();
+            ctx.arc(DRAIN.x, DRAIN.y, 30+i*12, sa, sa+Math.PI*1.2);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+}
+
+function drawObstacle(obs) {
+    const topH = obs.gapY - obs.gap/2;
+    const botY = obs.gapY + obs.gap/2;
+    const botH = H - 62 - botY;
+    const fns  = { soda:drawSodaBottle, garbage:drawGarbageBag, toilet:drawToiletRoll };
+    if (obs.type === 'pot') {
+        drawDirtyPot(obs.x, 0,    topH, true,  obs.dirtTop);
+        drawDirtyPot(obs.x, botY, botH, false, obs.dirtBot);
+    } else {
+        fns[obs.type](obs.x, 0,    topH, true);
+        fns[obs.type](obs.x, botY, botH, false);
+    }
+}
+
+// ─── Bird ────────────────────────────────────────────────────────────────────
+function drawBird(bx, by, vy, flapAngle, r) {
+    ctx.save(); ctx.translate(bx, by);
+    const tilt = Math.min(Math.max(vy*0.055,-0.5),1.1);
+    ctx.rotate(tilt);
+
+    // Drop shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath(); ctx.ellipse(5,r+7,r*0.75,8,0,0,Math.PI*2); ctx.fill();
+
+    // Wing
+    const wy = Math.sin(flapAngle)*10;
+    ctx.fillStyle = 'rgba(255,215,0,0.75)';
+    ctx.save(); ctx.translate(-8,wy); ctx.rotate(-0.2);
+    ctx.beginPath(); ctx.ellipse(0,0,24,11,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#c8a000'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(0,0,24,11,0,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+
+    // Photo clip
+    ctx.save(); ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.clip();
+    if (imgLoaded) {
+        ctx.drawImage(dishiImg,-r,-r,r*2,r*2);
+    } else {
+        const fb = ctx.createRadialGradient(0,0,0,0,0,r);
+        fb.addColorStop(0,'#ffe082'); fb.addColorStop(1,'#f9a825');
+        ctx.fillStyle=fb; ctx.fillRect(-r,-r,r*2,r*2);
+        ctx.fillStyle='#5d4037'; ctx.font=`bold ${r}px Arial`;
+        ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('D',0,2);
+    }
+    ctx.restore();
+
+    // Gold ring outline
+    ctx.strokeStyle='#ffd700'; ctx.lineWidth=3.5;
+    ctx.shadowColor='rgba(255,215,0,0.5)'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.restore();
+}
+
+// ─── Particles ───────────────────────────────────────────────────────────────
+function updateAndDrawParticles() {
+    particles = particles.filter(p=>p.life>0.01);
+    particles.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy; p.vy+=0.2; p.life-=0.026; p.size*=0.97;
+        ctx.save(); ctx.globalAlpha=p.life; ctx.fillStyle=p.color;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    });
+}
+
+// ─── Score flash ─────────────────────────────────────────────────────────────
+let scoreFlash = 0;
+function drawScore() {
+    const big = 1+Math.max(0,scoreFlash)*0.4; scoreFlash-=0.08;
+    ctx.save(); ctx.translate(W/2,56); ctx.scale(big,big);
+    ctx.font='bold 40px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=12;
+    ctx.fillStyle='white'; ctx.fillText(score,0,0);
+    ctx.restore();
+}
+
+// ─── Wave announcement ────────────────────────────────────────────────────────
+let waveAnnounce = { text: '', timer: 0 };
+function checkWaveChange(oldScore, newScore) {
+    const waves = [
+        {at:10, text:'⚡ שלב 2 — מהיר יותר!'},
+        {at:20, text:'🔥 שלב 3 — מתחמם!'},
+        {at:30, text:'💥 שלב 4 — קשה עכשיו!'},
+        {at:40, text:'🚀 שלב 5 — מטורף!'},
+        {at:50, text:'👹 שלב 6 — הישרדות!'},
+        {at:60, text:'💀 שלב 7 — אל תעצור!'},
+        {at:70, text:'😱 שלב 8 — בלתי אפשרי!'},
+        {at:80, text:'🔱 שלב 9 — אגדה!'},
+        {at:90, text:'👑 שלב 10 — דישי אלוהים!'},
+    ];
+    waves.forEach(w => { if (oldScore < w.at && newScore >= w.at) { waveAnnounce.text=w.text; waveAnnounce.timer=120; }});
+}
+function drawWaveAnnounce() {
+    if (waveAnnounce.timer <= 0) return;
+    waveAnnounce.timer--;
+    const a = Math.min(1, waveAnnounce.timer/20) * Math.min(1, (waveAnnounce.timer)/30);
+    ctx.save(); ctx.globalAlpha=a;
+    ctx.font='bold 30px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ffee00'; ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=14;
+    ctx.fillText(waveAnnounce.text, W/2, H/2-80);
+    ctx.restore();
+}
+
+// ─── Menu ────────────────────────────────────────────────────────────────────
+let menuBirdY=H/2-55, menuBirdDir=1;
+
+function drawMenu() {
+    menuBirdY += 0.55*menuBirdDir;
+    if (menuBirdY>H/2-30||menuBirdY<H/2-85) menuBirdDir*=-1;
+    drawBird(W/2, menuBirdY, 0, performance.now()*0.005, 46);
+
+    // Title banner — military stencil style
+    ctx.save();
+    // Backing plate
+    ctx.fillStyle = 'rgba(20,30,10,0.78)';
+    ctx.roundRect(W/2-152, 78, 304, 68, 8); ctx.fill();
+    ctx.strokeStyle = '#8aaa30'; ctx.lineWidth = 2.5;
+    ctx.roundRect(W/2-152, 78, 304, 68, 8); ctx.stroke();
+    // Corner bolts
+    [[W/2-148,83],[W/2+148,83],[W/2-148,141],[W/2+148,141]].forEach(([bx,by])=>{
+        ctx.fillStyle='#6a8820'; ctx.beginPath(); ctx.arc(bx,by,4,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#3a4a10'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(bx,by,4,0,Math.PI*2); ctx.stroke();
+    });
+    // Title text
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#d4e850';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 6;
+    ctx.fillText('✈ Flying Dishi ✈', W/2, 112);
+    ctx.restore();
+
+    // Dedication ribbon
+    ctx.save();
+    ctx.fillStyle = 'rgba(140,0,0,0.7)';
+    ctx.roundRect(W/2-140, 158, 280, 46, 6); ctx.fill();
+    ctx.strokeStyle='#ff8080'; ctx.lineWidth=1.5;
+    ctx.roundRect(W/2-140, 158, 280, 46, 6); ctx.stroke();
+
+    ctx.font = 'bold 16px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ffffff'; ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=6;
+    ctx.fillText('❤️ מוקדש לדישי רס״פ המפקדה ❤️', W/2, 174);
+    ctx.font='13px Arial'; ctx.fillStyle='rgba(255,200,200,0.85)';
+    ctx.fillText('תעוף גבוה, תמיד 🌟', W/2, 196);
+    ctx.restore();
+
+    // Press to start
+    const pulse = 0.7+0.3*Math.sin(performance.now()*0.003);
+    ctx.save(); ctx.globalAlpha=pulse;
+    ctx.font='bold 22px Arial'; ctx.textAlign='center';
+    ctx.fillStyle='#d4e850'; ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=10;
+    ctx.fillText('לחץ / הקש להתחיל', W/2, 500);
+    ctx.font='14px Arial'; ctx.fillStyle='rgba(200,220,120,0.6)';
+    ctx.fillText('Space · לחיצה · טאץ׳', W/2, 524);
+    ctx.restore();
+
+    if (highScore>0) {
+        ctx.save(); ctx.font='bold 19px Arial'; ctx.textAlign='center';
+        ctx.fillStyle='#ffd700'; ctx.shadowColor='rgba(0,0,0,0.7)'; ctx.shadowBlur=6;
+        ctx.fillText(`🏆 שיא: ${highScore}`, W/2, 562); ctx.restore();
+    }
+}
+
+// ─── Death Screen ─────────────────────────────────────────────────────────────
+function drawDeathScreen() {
+    ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(0,0,W,H);
+
+    // ── Layout constants ──────────────────────────────────────────────────────
+    const PX=30, PY=90, PW=W-60;
+    const IMG_Y=94, IMG_H=158;           // תמונה
+    const TITLE_Y=278;                   // "נכשלת חייל!"
+    const SUB_Y=306;                     // "פעם אחרונה..."
+    const DIV_Y=320;                     // קו מפריד
+    const SCORE_Y=348, HS_Y=376;         // ניקוד
+    const REC_Y=404;                     // שיא חדש (אם יש)
+    const BTN_Y=420, BTN_H=46;          // כפתור
+    const PH = BTN_Y+BTN_H+16-PY;       // גובה פאנל דינמי
+
+    // Panel
+    ctx.save();
+    ctx.fillStyle='rgba(8,12,4,0.95)'; ctx.strokeStyle='#c0d040'; ctx.lineWidth=3;
+    ctx.roundRect(PX, PY, PW, PH, 16); ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // Combat image
+    const imgX=PX+4, imgW=PW-8;
+    ctx.save();
+    ctx.roundRect(imgX, IMG_Y, imgW, IMG_H, [13,13,0,0]); ctx.clip();
+    if (combatLoaded) {
+        ctx.drawImage(combatImg, imgX, IMG_Y, imgW, IMG_H);
+    } else if (imgLoaded) {
+        ctx.drawImage(dishiImg, imgX, IMG_Y, imgW, IMG_H);
+    } else {
+        ctx.fillStyle='#3a4018'; ctx.fillRect(imgX,IMG_Y,imgW,IMG_H);
+        ctx.font='64px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('🎖️', W/2, IMG_Y+IMG_H/2);
+    }
+    // Fade image bottom into panel bg
+    const fade = ctx.createLinearGradient(0, IMG_Y+IMG_H-55, 0, IMG_Y+IMG_H);
+    fade.addColorStop(0,'rgba(8,12,4,0)'); fade.addColorStop(1,'rgba(8,12,4,0.96)');
+    ctx.fillStyle=fade; ctx.fillRect(imgX, IMG_Y, imgW, IMG_H);
+    ctx.restore();
+
+    // "נכשלת חייל!"
+    ctx.save();
+    ctx.font='bold 34px Arial'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillStyle='#ff4040'; ctx.shadowColor='#ff0000'; ctx.shadowBlur=14;
+    ctx.fillText('נכשלת חייל! 🎖️', W/2, TITLE_Y);
+    ctx.restore();
+
+    // "פעם אחרונה שזה קורה"
+    ctx.save();
+    ctx.font='bold 15px Arial'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillStyle='rgba(255,215,160,0.88)'; ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=4;
+    ctx.fillText('פעם אחרונה שזה קורה', W/2, SUB_Y);
+    ctx.restore();
+
+    // Divider
+    ctx.save();
+    ctx.strokeStyle='rgba(192,208,64,0.3)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(PX+24,DIV_Y); ctx.lineTo(PX+PW-24,DIV_Y); ctx.stroke();
+    ctx.restore();
+
+    // Score rows
+    ctx.save();
+    ctx.font='21px Arial'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.shadowColor='rgba(0,0,0,0.6)'; ctx.shadowBlur=5;
+    ctx.fillStyle='white';  ctx.fillText(`ניקוד: ${score}`,      W/2, SCORE_Y);
+    ctx.fillStyle='#ffd700'; ctx.fillText(`🏆 שיא: ${highScore}`, W/2, HS_Y);
+    if (score>0 && score===highScore) {
+        ctx.font='bold 17px Arial'; ctx.fillStyle='#ffeb3b';
+        ctx.shadowColor='#ff8800'; ctx.shadowBlur=12;
+        ctx.fillText('✨ שיא חדש! ✨', W/2, REC_Y);
+    }
+    ctx.restore();
+
+    // Restart button
+    ctx.save();
+    ctx.fillStyle='#c0d040';
+    ctx.roundRect(W/2-95, BTN_Y, 190, BTN_H, 11); ctx.fill();
+    ctx.font='bold 20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#1a2a00';
+    ctx.fillText('שחק שוב! 🔄', W/2, BTN_Y+BTN_H/2);
+    ctx.restore();
+}
+
+// ─── Collision ───────────────────────────────────────────────────────────────
+function checkCollision(obs) {
+    const topH=obs.gapY-obs.gap/2, botY=obs.gapY+obs.gap/2;
+    const pad=10;
+    const bL=bird.x-BIRD_R+pad, bR=bird.x+BIRD_R-pad;
+    const bT=bird.y-BIRD_R+pad, bB=bird.y+BIRD_R-pad;
+    if (bR>obs.x+4 && bL<obs.x+OBS_W-4) {
+        if (bT<topH||bB>botY) return true;
+    }
+    return false;
+}
+
+// ─── Game control ─────────────────────────────────────────────────────────────
+function startGame() {
+    gameState=STATE.PLAYING;
+    bird.y=H/2; bird.vy=0; bird.flapAngle=0;
+    obstacles=[]; particles=[]; score=0;
+    waveAnnounce.timer=0;
+    if (musicLoaded && !musicEnabled) {
+        musicEnabled=true; bgMusic.play().catch(()=>{ musicEnabled=false; });
+        musicToggle.textContent='🔊 מוזיקה'; musicToggle.classList.add('on');
+    }
+}
+
+function die() {
+    if (gameState!==STATE.PLAYING) return;
+    gameState=STATE.DYING;
+    deathAnim.t=0;
+    deathAnim.startX=bird.x;
+    deathAnim.startY=bird.y;
+    if (score>highScore) { highScore=score; localStorage.setItem('flyingDishiHS',highScore); }
+    spawnParticles(bird.x, bird.y);
+    playDeathSound();
+}
+
+function flap() {
+    if      (gameState===STATE.MENU)    startGame();
+    else if (gameState===STATE.PLAYING) { bird.vy=FLAP_V; bird.flapAngle=-0.5; }
+    else if (gameState===STATE.DYING)   { /* wait for animation */ }
+    else if (gameState===STATE.DEAD)    gameState=STATE.MENU;
+}
+
+// ─── Input ───────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+    if (e.code==='Space'||e.code==='ArrowUp') { e.preventDefault(); flap(); }
+});
+canvas.addEventListener('click',      e=>{ e.preventDefault(); flap(); });
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); flap(); },{passive:false});
+
+// ─── Main Loop ────────────────────────────────────────────────────────────────
+function gameLoop() {
+    drawMilitaryBase();
+
+    if (gameState===STATE.PLAYING) {
+        bird.vy        += GRAVITY;
+        bird.y         += bird.vy;
+        bird.flapAngle += 0.14;
+
+        if (bird.y+BIRD_R>H-62||bird.y-BIRD_R<0) die();
+
+        const diff = getDifficulty(score);
+        const last = obstacles[obstacles.length-1];
+        if (!last||last.x<W-diff.dist) {
+            const type=OBS_TYPES[Math.floor(Math.random()*OBS_TYPES.length)];
+            obstacles.push({
+                x:W+10,
+                gapY: 180+Math.random()*(H-62-diff.gap-220),
+                gap: diff.gap,
+                type,
+                passed:false,
+                dirtTop: type==='pot'?makeDirtMarks():null,
+                dirtBot: type==='pot'?makeDirtMarks():null,
+            });
+        }
+
+        obstacles.forEach(obs=>{
+            obs.x -= diff.speed;
+            if (!obs.passed&&obs.x+OBS_W<bird.x) {
+                const old=score;
+                obs.passed=true; score++; scoreFlash=1;
+                checkWaveChange(old, score);
+            }
+            if (checkCollision(obs)) die();
+        });
+        obstacles=obstacles.filter(o=>o.x>-OBS_W-10);
+    }
+
+    obstacles.forEach(drawObstacle);
+    if (gameState===STATE.PLAYING) drawBird(bird.x,bird.y,bird.vy,bird.flapAngle,BIRD_R);
+    if (gameState===STATE.DYING) {
+        deathAnim.t++;
+        if (deathAnim.t >= DEATH_DUR) { gameState=STATE.DEAD; saveScore('flying-dishi', auth.currentUser, score); }
+        else drawDyingBird();
+    }
+    updateAndDrawParticles();
+
+    if      (gameState===STATE.MENU)    drawMenu();
+    else if (gameState===STATE.PLAYING) { drawScore(); drawWaveAnnounce(); }
+    else if (gameState===STATE.DEAD)    drawDeathScreen();
+
+    requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
