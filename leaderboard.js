@@ -1,7 +1,7 @@
 // dishi-games/leaderboard.js
 import { db } from './firebase-config.js';
 import {
-  doc, getDoc, setDoc, collection,
+  doc, setDoc, collection, runTransaction,
   query, orderBy, limit, onSnapshot, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
@@ -11,14 +11,16 @@ import {
 export async function saveScore(gameId, user, score) {
   if (!user) return;
   const ref = doc(db, 'leaderboard', gameId, 'scores', user.uid);
-  const snap = await getDoc(ref);
-  if (snap.exists() && snap.data().score >= score) return; // keep highest
-  await setDoc(ref, {
-    uid:       user.uid,
-    name:      user.displayName || 'אנונימי',
-    photoURL:  user.photoURL || '',
-    score,
-    timestamp: serverTimestamp()
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists() && snap.data().score >= score) return;
+    tx.set(ref, {
+      uid:      user.uid,
+      name:     user.displayName || 'אנונימי',
+      photoURL: user.photoURL || '',
+      score,
+      timestamp: serverTimestamp()
+    });
   });
 }
 
@@ -31,5 +33,7 @@ export function subscribeTopScores(gameId, callback) {
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map(d => d.data()));
+  }, (err) => {
+    console.error('Leaderboard snapshot error:', err);
   });
 }
