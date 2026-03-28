@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>עולם דישי 🎮</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: #1a1a0e;
+      color: #e8e0b0;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    /* ── Header ── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(80,100,40,0.3);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(160,180,80,0.3);
+    }
+    .logo { font-size: 1.6rem; font-weight: bold; color: #c8e060; }
+    .logo span { font-size: 1rem; color: #a0b060; display:block; }
+    #authArea { display:flex; align-items:center; gap:10px; }
+    #authArea img { width:36px; height:36px; border-radius:50%; border:2px solid #a0c040; }
+    #authArea span { font-size:0.85rem; color:#c0d080; }
+    .btn {
+      background: rgba(80,120,30,0.6);
+      color: #e8e0b0;
+      border: 1.5px solid rgba(160,180,80,0.5);
+      padding: 7px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: rgba(100,150,40,0.8); }
+    /* ── Games Grid ── */
+    h2 { color: #a8c050; margin-bottom: 12px; font-size: 1.1rem; }
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .game-card {
+      background: rgba(50,70,20,0.5);
+      border: 2px solid rgba(120,160,40,0.4);
+      border-radius: 12px;
+      padding: 16px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.2s;
+      position: relative;
+    }
+    .game-card:hover:not(.locked) { transform: translateY(-3px); border-color: #a0c040; }
+    .game-card.locked { opacity: 0.5; cursor: not-allowed; }
+    .game-card .emoji { font-size: 2.2rem; display:block; margin-bottom:6px; }
+    .game-card .game-name { font-weight: bold; color: #d8e898; font-size: 0.95rem; }
+    .game-card .game-sub { font-size: 0.75rem; color: #8a9a50; margin-top:3px; }
+    .game-card .coming-soon {
+      position: absolute; top:6px; left:6px;
+      background: rgba(200,80,40,0.8);
+      color:#fff; font-size:0.65rem; padding:2px 6px;
+      border-radius:4px; font-weight:bold;
+    }
+    /* ── Game Container ── */
+    #gameContainer {
+      display: none;
+      margin-bottom: 24px;
+    }
+    #gameContainer.visible { display: block; }
+    #backBtn { margin-bottom: 10px; }
+    #gameFrame {
+      width: 100%;
+      height: 680px;
+      border: none;
+      border-radius: 10px;
+    }
+    /* ── Leaderboard ── */
+    .lb-tabs { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+    .lb-tab {
+      background: rgba(60,80,20,0.5);
+      border: 1.5px solid rgba(120,160,40,0.3);
+      color: #a0b060;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .lb-tab.active { background: rgba(100,140,30,0.7); color:#fff; border-color:#a0c040; }
+    .lb-list { list-style:none; }
+    .lb-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-bottom: 1px solid rgba(100,120,40,0.2);
+      font-size: 0.85rem;
+    }
+    .lb-list li:first-child { color:#ffd700; }
+    .lb-list li:nth-child(2) { color:#c0c0c0; }
+    .lb-list li:nth-child(3) { color:#cd7f32; }
+    .lb-rank { width:24px; font-weight:bold; text-align:center; }
+    .lb-avatar { width:28px; height:28px; border-radius:50%; object-fit:cover; }
+    .lb-avatar-placeholder { width:28px; height:28px; border-radius:50%; background:rgba(100,140,40,0.4); display:flex; align-items:center; justify-content:center; font-size:0.75rem; }
+    .lb-name { flex:1; }
+    .lb-score { font-weight:bold; color:#c8e060; }
+    .lb-empty { color:#606840; font-size:0.85rem; padding:16px; text-align:center; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎮 עולם דישי <span>פלטפורמת המשחקים</span></div>
+  <div id="authArea">
+    <button class="btn" id="loginBtn" onclick="handleAuth()">התחבר עם גוגל</button>
+  </div>
+</header>
+
+<h2>🕹️ המשחקים</h2>
+<div class="games-grid">
+  <div class="game-card" onclick="openGame('flying-dishi')">
+    <span class="emoji">🚀</span>
+    <div class="game-name">דישי המעופף</div>
+    <div class="game-sub">Flappy Dishi</div>
+  </div>
+  <div class="game-card" onclick="openGame('dishi-hangman')">
+    <span class="emoji">🔤</span>
+    <div class="game-name">דיש תלוי</div>
+    <div class="game-sub">נחש את המילה</div>
+  </div>
+  <div class="game-card locked">
+    <span class="coming-soon">בקרוב</span>
+    <span class="emoji">👑</span>
+    <div class="game-name">מלך הרספיה</div>
+    <div class="game-sub">בקרוב...</div>
+  </div>
+  <div class="game-card locked">
+    <span class="coming-soon">בקרוב</span>
+    <span class="emoji">🔥</span>
+    <div class="game-name">דישי הכבאי</div>
+    <div class="game-sub">בקרוב...</div>
+  </div>
+</div>
+
+<div id="gameContainer">
+  <button class="btn" id="backBtn" onclick="closeGame()">← חזרה ללובי</button>
+  <iframe id="gameFrame" allowfullscreen></iframe>
+</div>
+
+<h2>🏆 לידרבורד</h2>
+<div class="lb-tabs">
+  <button class="lb-tab active" onclick="switchLbTab('flying-dishi', this)">דישי המעופף</button>
+  <button class="lb-tab" onclick="switchLbTab('dishi-hangman', this)">דיש תלוי</button>
+</div>
+<ul class="lb-list" id="lbList"><li class="lb-empty">טוען...</li></ul>
+
+<script type="module">
+  import { initAuth, signInWithGoogle, signOutUser } from './auth.js';
+  import { subscribeTopScores } from './leaderboard.js';
+
+  let currentUser = null;
+  let lbUnsub     = null;
+
+  initAuth((user) => {
+    currentUser = user;
+    window._currentUser = user;
+    const area = document.getElementById('authArea');
+    if (user) {
+      area.innerHTML = `
+        <img src="${user.photoURL}" alt="">
+        <span>${user.displayName}</span>
+        <button class="btn" onclick="handleAuth()">התנתק</button>
+      `;
+    } else {
+      area.innerHTML = `<button class="btn" onclick="handleAuth()">התחבר עם גוגל</button>`;
+    }
+  });
+
+  window.handleAuth = async () => {
+    if (window._currentUser) {
+      await signOutUser();
+    } else {
+      await signInWithGoogle();
+    }
+  };
+
+  window.openGame = (gameId) => {
+    const gc = document.getElementById('gameContainer');
+    const frame = document.getElementById('gameFrame');
+    frame.src = `games/${gameId}.html`;
+    gc.classList.add('visible');
+    document.querySelector('.games-grid').style.display = 'none';
+  };
+
+  window.closeGame = () => {
+    const gc = document.getElementById('gameContainer');
+    const frame = document.getElementById('gameFrame');
+    frame.src = '';
+    gc.classList.remove('visible');
+    document.querySelector('.games-grid').style.display = 'grid';
+  };
+
+  window.switchLbTab = (gameId, btn) => {
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    loadLeaderboard(gameId);
+  };
+
+  function loadLeaderboard(gameId) {
+    if (lbUnsub) lbUnsub();
+    lbUnsub = subscribeTopScores(gameId, renderLeaderboard);
+  }
+
+  function renderLeaderboard(scores) {
+    const list = document.getElementById('lbList');
+    if (!scores.length) {
+      list.innerHTML = '<li class="lb-empty">אין ניקודים עדיין — היה הראשון!</li>';
+      return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    list.innerHTML = scores.map((s, i) => `
+      <li>
+        <span class="lb-rank">${medals[i] || (i+1)}</span>
+        ${s.photoURL
+          ? `<img class="lb-avatar" src="${s.photoURL}" alt="">`
+          : `<div class="lb-avatar-placeholder">😊</div>`}
+        <span class="lb-name">${s.name}</span>
+        <span class="lb-score">${s.score}</span>
+      </li>
+    `).join('');
+  }
+
+  // Load default leaderboard on startup
+  loadLeaderboard('flying-dishi');
+</script>
+</body>
+</html>
