@@ -3,183 +3,398 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>דיש תלוי 🔤</title>
+  <title>דיש תלוי</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      background: #1a1a0e;
-      color: #e8e0b0;
-      font-family: Arial, sans-serif;
+      background: linear-gradient(150deg, #0d0820 0%, #1a0d2e 45%, #2a1240 100%);
+      color: #f0e0d0;
+      font-family: 'Nunito', sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      padding: 16px;
+      padding: 16px 12px 24px;
       user-select: none;
+      overflow-x: hidden;
     }
-    h1 { color:#c8e060; font-size:1.4rem; margin-bottom:4px; }
-    #score-area { color:#a0b060; font-size:0.9rem; margin-bottom:12px; }
-    /* Dishi reveal image */
-    #dishi-container {
-      position: relative;
-      width: 160px;
-      height: 180px;
+
+    h1 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 2rem;
+      background: linear-gradient(135deg, #ff6b35, #ff9a5c, #ffd700);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 2px;
+      text-align: center;
+    }
+
+    #score-area {
+      color: #ffb88c;
+      font-size: 0.9rem;
+      margin-bottom: 14px;
+      font-weight: 700;
+    }
+
+    /* Game panels: gallows + dishi photo */
+    #game-area {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      justify-content: center;
       margin-bottom: 12px;
+      width: 100%;
+      max-width: 380px;
     }
+
+    /* SVG gallows */
+    #gallows-wrap {
+      flex: 0 0 auto;
+    }
+
+    #hangman-svg {
+      width: 140px;
+      height: 160px;
+      filter: drop-shadow(0 0 8px rgba(255,107,53,0.3));
+    }
+
+    .g-base {
+      stroke: #ff8c42;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      fill: none;
+    }
+
+    .g-part {
+      stroke: #ff6b35;
+      stroke-width: 3;
+      stroke-linecap: round;
+      fill: none;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .g-part.on { opacity: 1; }
+
+    #part-head {
+      stroke: #ffaa66;
+      stroke-width: 2.5;
+      fill: rgba(255,140,80,0.08);
+    }
+
+    /* Dishi photo */
+    #dishi-wrap {
+      flex: 0 0 auto;
+      position: relative;
+      width: 110px;
+      height: 130px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 2px solid rgba(255,140,66,0.35);
+      box-shadow: 0 0 24px rgba(255,107,53,0.18);
+    }
+
     #dishi-img {
-      width: 160px;
-      height: 180px;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
-      border-radius: 12px;
-      border: 2px solid rgba(160,180,80,0.4);
+      display: block;
     }
+
     #dishi-overlay {
       position: absolute;
       inset: 0;
-      background: #1a1a0e;
-      border-radius: 12px;
-      transition: opacity 0.5s;
+      background: linear-gradient(150deg, #0d0820, #1a0d2e);
+      transition: opacity 0.55s ease;
     }
-    /* Lives as hearts */
-    #lives { font-size:1.3rem; margin-bottom:10px; letter-spacing:2px; }
-    /* Word blanks */
+
+    #dishi-label {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      background: rgba(0,0,0,0.55);
+      color: #ffcc88;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 3px 0;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+
+    #dishi-wrap.revealed #dishi-label { opacity: 1; }
+
+    /* Lives */
+    #lives {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      letter-spacing: 3px;
+      text-align: center;
+      min-height: 28px;
+    }
+
+    /* Wrong letters */
+    #wrong-letters {
+      color: rgba(220,80,60,0.7);
+      font-size: 0.8rem;
+      margin-bottom: 8px;
+      min-height: 18px;
+      text-align: center;
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+
+    /* Word display – RTL so Hebrew reads naturally */
     #word-display {
       display: flex;
-      gap: 8px;
+      flex-direction: row-reverse;
+      gap: 6px;
       flex-wrap: wrap;
       justify-content: center;
-      margin-bottom: 14px;
-      min-height: 40px;
+      margin-bottom: 8px;
+      min-height: 50px;
+      max-width: 360px;
     }
+
     .letter-box {
-      width: 28px;
-      border-bottom: 3px solid #a0c040;
+      width: 30px;
+      height: 42px;
+      border-bottom: 3px solid rgba(255,140,66,0.55);
       text-align: center;
-      font-size: 1.4rem;
-      font-weight: bold;
-      color: #e8e0b0;
-      height: 36px;
-      line-height: 36px;
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: #fff5e0;
+      line-height: 42px;
     }
+
+    .letter-box.pop {
+      animation: pop 0.35s ease forwards;
+    }
+
+    @keyframes pop {
+      0%   { transform: scale(1.5) translateY(-4px); color: #ff9a5c; }
+      60%  { transform: scale(0.9); }
+      100% { transform: scale(1); color: #fff5e0; }
+    }
+
     /* Hint */
-    #hint-text { color:#8a9a50; font-size:0.85rem; margin-bottom:12px; min-height:18px; }
+    #hint-text {
+      color: #ffb88c;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      min-height: 20px;
+      text-align: center;
+      opacity: 0.85;
+    }
+
     /* Keyboard */
     #keyboard {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 5px;
-      max-width: 340px;
-      margin-bottom: 14px;
+      max-width: 360px;
+      margin-bottom: 12px;
+      direction: rtl;
     }
+
     .key-btn {
-      background: rgba(70,90,30,0.6);
-      border: 1.5px solid rgba(120,160,40,0.4);
-      color: #d8e898;
-      width: 34px;
-      height: 34px;
-      border-radius: 6px;
+      background: rgba(255,107,53,0.1);
+      border: 1.5px solid rgba(255,140,66,0.3);
+      color: #ffd0a0;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
       font-size: 1rem;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.13s, transform 0.1s, border-color 0.13s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
-    .key-btn:hover:not(:disabled) { background: rgba(100,140,40,0.8); }
-    .key-btn:disabled { opacity:0.25; cursor:default; }
-    .key-btn.wrong { background: rgba(180,50,30,0.5); border-color: rgba(200,80,60,0.5); }
-    /* Result overlay */
+
+    .key-btn:hover:not(:disabled) {
+      background: rgba(255,107,53,0.32);
+      border-color: rgba(255,140,66,0.65);
+      transform: scale(1.12);
+    }
+
+    .key-btn:active:not(:disabled) { transform: scale(0.9); }
+
+    .key-btn:disabled { opacity: 0.18; cursor: default; transform: none !important; }
+
+    .key-btn.wrong   { background: rgba(200,50,30,0.28); border-color: rgba(220,80,60,0.45); color: rgba(255,140,120,0.55); }
+    .key-btn.correct { background: rgba(60,200,80,0.18); border-color: rgba(80,220,100,0.45); color: rgba(140,255,150,0.85); }
+
+    /* Shake on wrong */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-7px); }
+      40% { transform: translateX(7px); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(5px); }
+    }
+    .shake { animation: shake 0.38s ease; }
+
+    /* Result */
     #result {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.85);
+      background: rgba(5,2,18,0.93);
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 14px;
-      z-index: 10;
+      gap: 18px;
+      z-index: 100;
+      padding: 32px 24px;
     }
-    #result.show { display:flex; }
-    #result-title { font-size:2.2rem; }
-    #result-word { color:#c8e060; font-size:1.1rem; }
-    #result-score { color:#a0b060; font-size:0.95rem; }
+    #result.show { display: flex; }
+
+    #result-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: 3rem;
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    #result-reveal {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid rgba(255,180,80,0.6);
+      box-shadow: 0 0 32px rgba(255,140,53,0.35);
+    }
+
+    #result-reveal img { width: 100%; height: 100%; object-fit: cover; }
+
+    #result-word {
+      color: #ffb88c;
+      font-size: 1rem;
+      text-align: center;
+    }
+
+    #result-score {
+      font-family: 'Fredoka One', cursive;
+      font-size: 2rem;
+      color: #ffd700;
+      text-shadow: 0 0 16px rgba(255,215,0,0.4);
+    }
+
     .btn {
-      background: rgba(80,120,30,0.7);
-      color: #e8e0b0;
-      border: 1.5px solid rgba(160,180,80,0.5);
-      padding: 10px 24px;
-      border-radius: 8px;
+      background: linear-gradient(135deg, #ff6b35, #ff9a5c);
+      color: white;
+      border: none;
+      padding: 13px 36px;
+      border-radius: 50px;
       cursor: pointer;
-      font-size:1rem;
-      font-weight:bold;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 20px rgba(255,107,53,0.45);
+      transition: transform 0.18s, box-shadow 0.18s;
     }
-    .btn:hover { background: rgba(110,150,40,0.9); }
+    .btn:hover { transform: scale(1.06); box-shadow: 0 6px 28px rgba(255,107,53,0.65); }
   </style>
 </head>
 <body>
-<h1>🔤 דיש תלוי</h1>
+
+<h1>🎭 דיש תלוי</h1>
 <div id="score-area">ניקוד: <span id="scoreDisplay">0</span></div>
 
-<div id="dishi-container">
-  <img id="dishi-img" src="../assets/dishi.png" alt="דישי">
-  <div id="dishi-overlay"></div>
+<div id="game-area">
+  <!-- Classic hangman SVG -->
+  <div id="gallows-wrap">
+    <svg id="hangman-svg" viewBox="0 0 100 125" xmlns="http://www.w3.org/2000/svg">
+      <!-- Gallows: always visible -->
+      <line class="g-base" x1="10" y1="118" x2="90" y2="118"/>
+      <line class="g-base" x1="28" y1="118" x2="28" y2="6"/>
+      <line class="g-base" x1="28" y1="6"   x2="66" y2="6"/>
+      <line class="g-base" x1="66" y1="6"   x2="66" y2="21"/>
+      <!-- Body parts: shown on wrong guesses -->
+      <circle id="part-head"      class="g-part" cx="66" cy="30" r="9"/>
+      <line   id="part-body"      class="g-part" x1="66" y1="39" x2="66" y2="72"/>
+      <line   id="part-arm-l"     class="g-part" x1="66" y1="48" x2="50" y2="61"/>
+      <line   id="part-arm-r"     class="g-part" x1="66" y1="48" x2="82" y2="61"/>
+      <line   id="part-leg-l"     class="g-part" x1="66" y1="72" x2="52" y2="90"/>
+      <line   id="part-leg-r"     class="g-part" x1="66" y1="72" x2="80" y2="90"/>
+    </svg>
+  </div>
+
+  <!-- Dishi photo: reveals as you guess correctly -->
+  <div id="dishi-wrap">
+    <img id="dishi-img" src="../assets/dishi.png" alt="דישי">
+    <div id="dishi-overlay"></div>
+    <div id="dishi-label">דישי! 🎉</div>
+  </div>
 </div>
 
-<div id="lives">❤️❤️❤️❤️❤️❤️</div>
+<div id="lives"></div>
+<div id="wrong-letters"></div>
 <div id="word-display"></div>
 <div id="hint-text"></div>
 <div id="keyboard"></div>
 
+<!-- Result overlay -->
 <div id="result">
   <div id="result-title"></div>
+  <div id="result-reveal"><img src="../assets/dishi.png" alt="דישי"></div>
   <div id="result-word"></div>
   <div id="result-score"></div>
-  <button class="btn" onclick="startNewRound()">משחק נוסף ▶</button>
+  <button class="btn" onclick="startNewRound()">🔄 משחק נוסף</button>
 </div>
 
 <script type="module">
 import { saveScore } from '../leaderboard.js';
 import { auth } from '../firebase-config.js';
 
-// ── Word list: replace with real Dishi words before launch ──
 const WORDS = [
-  { word: 'דישי',      hint: 'הגיבור שלנו' },
-  { word: 'רספיה',     hint: 'המאכל האהוב' },
-  { word: 'פלאפל',     hint: 'מאכל ישראלי קלאסי' },
-  { word: 'ירושלים',   hint: 'עיר הבירה' },
-  { word: 'חומוס',     hint: 'ממרח פופולרי' },
-  { word: 'שוק',       hint: 'מקום קניות' },
-  { word: 'גריל',      hint: 'אופן בישול' },
-  { word: 'מנגל',      hint: 'מסורת ישראלית' },
-  { word: 'שישליק',    hint: 'בשר על שיפוד' },
-  { word: 'לחמנייה',   hint: 'מה שעוטף את הפלאפל' },
-  { word: 'טחינה',     hint: 'רוטב מפולי שומשום' },
-  { word: 'כבשים',     hint: 'חיות שמכאן מגיע הלשניצל' },
-  { word: 'חברים',     hint: 'מה שיש לדישי הרבה' },
-  { word: 'מוזיקה',    hint: 'דישי אוהב לשמוע' },
-  { word: 'מסיבה',     hint: 'היום הזה בגלל מה' },
-  { word: 'יומהולדת',  hint: 'אירוע מיוחד' },
+  { word: 'דישי',       hint: 'הגיבור של כולנו 👑' },
+  { word: 'רספיה',      hint: 'המאכל שדישי הוא מלכו' },
+  { word: 'תדר',        hint: '"אתה יורד לי מה..."' },
+  { word: 'צפון',       hint: '"הכיוון שנגד הים"' },
+  { word: 'שריפות',     hint: '"אני מכבה..."' },
+  { word: 'סיגריה',     hint: '"...ונמשיך"' },
+  { word: 'כבאי',       hint: 'מה שדישי הוא בלב' },
+  { word: 'מותג',       hint: 'דישי הוא... חי' },
+  { word: 'כריזמה',     hint: 'יש לו יותר מדי מזה' },
+  { word: 'מסיבה',      hint: 'מה שקורה היום 🎊' },
+  { word: 'הפתעה',      hint: 'מה שעשינו לדישי' },
+  { word: 'יומהולדת',   hint: 'ה... של דישי 🎂' },
+  { word: 'חברים',      hint: 'מה שיש לדישי המון' },
+  { word: 'אגדה',       hint: 'מה שדישי הוא' },
+  { word: 'מלך',        hint: 'תואר שמגיע לו' },
+  { word: 'ניצחון',     hint: 'הסוף של כל סיפור של דישי' },
 ];
 
+const PARTS = ['part-head','part-body','part-arm-l','part-arm-r','part-leg-l','part-leg-r'];
 const MAX_WRONG = 6;
 const ALEPH_BET = 'אבגדהוזחטיכלמנסעפצקרשת';
 
-let state = {
-  word: '', hint: '', guessed: new Set(),
-  wrongCount: 0, score: 0, roundScore: 0
-};
+let state = { word:'', hint:'', guessed:new Set(), wrongCount:0, score:0, roundScore:0 };
+let usedWords = new Set();
 
 function pickWord() {
-  return WORDS[Math.floor(Math.random() * WORDS.length)];
+  if (usedWords.size >= WORDS.length) usedWords.clear();
+  let w;
+  do { w = WORDS[Math.floor(Math.random() * WORDS.length)]; } while (usedWords.has(w.word));
+  usedWords.add(w.word);
+  return w;
 }
 
 function startNewRound() {
   const { word, hint } = pickWord();
   state.guessed    = new Set();
   state.wrongCount = 0;
-  state.roundScore = word.length * 10;
+  state.roundScore = word.length * 15;
   state.word = word;
   state.hint = hint;
   document.getElementById('result').classList.remove('show');
+  PARTS.forEach(id => document.getElementById(id).classList.remove('on'));
   renderAll();
 }
 
@@ -188,15 +403,20 @@ function renderAll() {
   renderLives();
   renderKeyboard();
   renderOverlay();
-  document.getElementById('hint-text').textContent = `רמז: ${state.hint}`;
+  renderWrongLetters();
+  document.getElementById('hint-text').textContent = `💡 רמז: ${state.hint}`;
   document.getElementById('scoreDisplay').textContent = state.score;
 }
 
 function renderWord() {
   const display = document.getElementById('word-display');
-  display.innerHTML = state.word.split('').map(ch => {
+  const prev = display.querySelectorAll('.letter-box');
+  const oldRevealed = new Set([...prev].map((el, i) => el.textContent ? i : null).filter(x => x !== null));
+
+  display.innerHTML = state.word.split('').map((ch, i) => {
     const revealed = state.guessed.has(ch) || ch === ' ';
-    return `<div class="letter-box">${revealed ? ch : ''}</div>`;
+    const isNew    = revealed && !oldRevealed.has(i);
+    return `<div class="letter-box${isNew ? ' pop' : ''}">${revealed ? ch : ''}</div>`;
   }).join('');
 }
 
@@ -206,23 +426,36 @@ function renderLives() {
     '❤️'.repeat(remaining) + '🖤'.repeat(state.wrongCount);
 }
 
+function renderWrongLetters() {
+  const wrongs = [...state.guessed].filter(ch => !state.word.includes(ch));
+  document.getElementById('wrong-letters').textContent =
+    wrongs.length ? `שגיאות: ${wrongs.join(' ')}` : '';
+}
+
 function renderKeyboard() {
   const kb = document.getElementById('keyboard');
   kb.innerHTML = ALEPH_BET.split('').map(ch => {
-    const isGuessed = state.guessed.has(ch);
-    const isWrong   = isGuessed && !state.word.includes(ch);
-    return `<button
-      class="key-btn${isWrong ? ' wrong' : ''}"
-      ${isGuessed ? 'disabled' : ''}
-      onclick="guess('${ch}')">${ch}</button>`;
+    const guessed  = state.guessed.has(ch);
+    const isWrong  = guessed && !state.word.includes(ch);
+    const isRight  = guessed && state.word.includes(ch);
+    let cls = 'key-btn';
+    if (isWrong) cls += ' wrong';
+    if (isRight) cls += ' correct';
+    return `<button class="${cls}" ${guessed ? 'disabled' : ''} onclick="guess('${ch}')">${ch}</button>`;
   }).join('');
 }
 
 function renderOverlay() {
-  const overlay = document.getElementById('dishi-overlay');
-  // opacity 1 = dishi hidden, opacity 0 = dishi fully visible
-  const opacity = 1 - (state.wrongCount / MAX_WRONG);
-  overlay.style.opacity = opacity;
+  const wordChars = new Set(state.word.replace(/ /g,'').split(''));
+  const correct   = [...wordChars].filter(c => state.guessed.has(c)).length;
+  const ratio     = correct / wordChars.size;
+  document.getElementById('dishi-overlay').style.opacity = 1 - ratio;
+  if (ratio > 0.5) document.getElementById('dishi-wrap').classList.add('revealed');
+  else             document.getElementById('dishi-wrap').classList.remove('revealed');
+}
+
+function showGallows() {
+  PARTS.slice(0, state.wrongCount).forEach(id => document.getElementById(id).classList.add('on'));
 }
 
 window.guess = (ch) => {
@@ -232,20 +465,21 @@ window.guess = (ch) => {
   if (!state.word.includes(ch)) {
     state.wrongCount++;
     state.roundScore = Math.max(0, state.roundScore - 15);
+    showGallows();
+    const svg = document.getElementById('hangman-svg');
+    svg.classList.remove('shake');
+    void svg.offsetWidth;
+    svg.classList.add('shake');
   }
 
-  const wordChars  = new Set(state.word.replace(/ /g, '').split(''));
+  const wordChars  = new Set(state.word.replace(/ /g,'').split(''));
   const allGuessed = [...wordChars].every(c => state.guessed.has(c));
-  const outOfLives = state.wrongCount >= MAX_WRONG;
+  const dead       = state.wrongCount >= MAX_WRONG;
 
-  if (allGuessed) {
-    state.score += state.roundScore;
-    showResult(true);
-  } else if (outOfLives) {
-    showResult(false);
-  } else {
-    renderAll();
-  }
+  renderAll();
+
+  if (allGuessed)   setTimeout(() => showResult(true),  350);
+  else if (dead)    setTimeout(() => showResult(false), 500);
 };
 
 function showResult(won) {
@@ -253,15 +487,12 @@ function showResult(won) {
   document.getElementById('result-word').textContent  = `המילה הייתה: ${state.word}`;
   document.getElementById('result-score').textContent = `ניקוד: ${state.score}`;
   document.getElementById('result').classList.add('show');
-  if (won) {
+  if (won && auth.currentUser) {
     saveScore('dishi-hangman', auth.currentUser, state.score);
   }
-  renderAll();
 }
 
 window.startNewRound = startNewRound;
-
-// Start first round
 startNewRound();
 </script>
 </body>
