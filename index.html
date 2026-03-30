@@ -4,163 +4,445 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>עולם דישי 🎮</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    /* ── Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg:          #08081A;
+      --bg-card:     #0D0D2B;
+      --purple:      #7C3AED;
+      --purple-glow: rgba(124,58,237,0.4);
+      --lavender:    #A78BFA;
+      --pink:        #F43F5E;
+      --pink-glow:   rgba(244,63,94,0.35);
+      --cyan:        #00F5FF;
+      --cyan-glow:   rgba(0,245,255,0.3);
+      --gold:        #FFD700;
+      --gold-glow:   rgba(255,215,0,0.35);
+      --green:       #39FF14;
+      --green-glow:  rgba(57,255,20,0.3);
+      --text:        #E8E0FF;
+      --text-muted:  #7B70A0;
+      --border:      rgba(124,58,237,0.25);
+      --r:           12px;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
     body {
-      background: #1a1a0e;
-      color: #e8e0b0;
-      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
       min-height: 100vh;
-      padding: 16px;
-    }
-    /* ── Header ── */
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      background: rgba(80,100,40,0.3);
-      border-radius: 12px;
-      margin-bottom: 20px;
-      border: 1px solid rgba(160,180,80,0.3);
-    }
-    .logo { font-size: 1.6rem; font-weight: bold; color: #c8e060; }
-    .logo span { font-size: 1rem; color: #a0b060; display:block; }
-    #authArea { display:flex; align-items:center; gap:10px; }
-    #authArea img { width:36px; height:36px; border-radius:50%; border:2px solid #a0c040; }
-    #authArea span { font-size:0.85rem; color:#c0d080; }
-    .btn {
-      background: rgba(80,120,30,0.6);
-      color: #e8e0b0;
-      border: 1.5px solid rgba(160,180,80,0.5);
-      padding: 7px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-    .btn:hover { background: rgba(100,150,40,0.8); }
-    /* ── Games Grid ── */
-    h2 { color: #a8c050; margin-bottom: 12px; font-size: 1.1rem; }
-    .games-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .game-card {
-      background: rgba(50,70,20,0.5);
-      border: 2px solid rgba(120,160,40,0.4);
-      border-radius: 12px;
-      padding: 16px 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: transform 0.15s, border-color 0.2s;
+      overflow-x: hidden;
       position: relative;
     }
-    .game-card:hover:not(.locked) { transform: translateY(-3px); border-color: #a0c040; }
-    .game-card.locked { opacity: 0.5; cursor: not-allowed; }
-    .game-card .emoji { font-size: 2.2rem; display:block; margin-bottom:6px; }
-    .game-card .game-name { font-weight: bold; color: #d8e898; font-size: 0.95rem; }
-    .game-card .game-sub { font-size: 0.75rem; color: #8a9a50; margin-top:3px; }
-    .game-card .coming-soon {
-      position: absolute; top:6px; left:6px;
-      background: rgba(200,80,40,0.8);
-      color:#fff; font-size:0.65rem; padding:2px 6px;
-      border-radius:4px; font-weight:bold;
+
+    /* CRT scanlines */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
     }
-    /* ── Game Container ── */
-    #gameContainer {
-      display: none;
-      margin-bottom: 24px;
+
+    #stars { position:fixed; inset:0; pointer-events:none; z-index:0; }
+
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px 14px 40px;
     }
-    #gameContainer.visible { display: block; }
-    #backBtn { margin-bottom: 10px; }
-    #gameFrame {
-      width: 100%;
-      height: 680px;
-      border: none;
-      border-radius: 10px;
+
+    /* ── HERO ── */
+    .hero { text-align:center; padding: 28px 0 18px; }
+
+    .hero-badge {
+      display: inline-block;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.5rem;
+      color: var(--gold);
+      letter-spacing: 3px;
+      background: rgba(255,215,0,0.08);
+      border: 1px solid rgba(255,215,0,0.3);
+      padding: 5px 14px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      animation: badge-pulse 2.5s ease-in-out infinite;
     }
-    /* ── Leaderboard ── */
-    .lb-tabs { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
-    .lb-tab {
-      background: rgba(60,80,20,0.5);
-      border: 1.5px solid rgba(120,160,40,0.3);
-      color: #a0b060;
-      padding: 5px 12px;
-      border-radius: 6px;
+    @keyframes badge-pulse {
+      0%,100% { box-shadow: 0 0 6px var(--gold-glow); }
+      50%      { box-shadow: 0 0 20px var(--gold-glow), 0 0 40px var(--gold-glow); }
+    }
+
+    .hero-title {
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(2.8rem, 9vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--text);
+      text-shadow: 0 0 20px var(--purple-glow), 0 0 50px var(--purple-glow);
+      animation: title-glow 3s ease-in-out infinite;
+    }
+    .hero-title span { color: var(--lavender); }
+    @keyframes title-glow {
+      0%,100% { text-shadow: 0 0 20px var(--purple-glow), 0 0 40px var(--purple-glow); }
+      50%      { text-shadow: 0 0 30px rgba(167,139,250,0.7), 0 0 70px var(--purple-glow); }
+    }
+
+    .hero-subtitle {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.52rem;
+      color: var(--pink);
+      letter-spacing: 2px;
+      margin-top: 10px;
+      text-shadow: 0 0 12px var(--pink-glow);
+      animation: flicker 4s step-start infinite;
+    }
+    @keyframes flicker {
+      0%,19%,21%,23%,25%,54%,56%,100% { opacity:1; }
+      20%,22%,24%,55% { opacity: 0.35; }
+    }
+
+    /* ── AUTH BAR ── */
+    .auth-bar {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin: 18px 0 8px;
+      padding: 10px 16px;
+      background: rgba(13,13,43,0.8);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      backdrop-filter: blur(8px);
+      min-height: 54px;
+    }
+
+    .auth-avatar {
+      width:34px; height:34px; border-radius:50%;
+      border: 2px solid var(--lavender);
+      box-shadow: 0 0 10px var(--purple-glow);
+      object-fit: cover;
+    }
+    .auth-name { font-weight:700; font-size:0.9rem; color:var(--lavender); flex:1; }
+
+    .btn-insert {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.42rem; letter-spacing: 1px;
+      padding: 10px 18px;
+      background: transparent;
+      border: 2px solid var(--cyan); color: var(--cyan);
+      border-radius: 6px; cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 0 10px var(--cyan-glow), inset 0 0 10px rgba(0,245,255,0.04);
+      white-space: nowrap;
+    }
+    .btn-insert:hover {
+      background: rgba(0,245,255,0.1);
+      box-shadow: 0 0 22px var(--cyan-glow), 0 0 44px var(--cyan-glow);
+      transform: scale(1.04);
+    }
+
+    .btn-signout {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.38rem; letter-spacing: 1px;
+      padding: 7px 12px;
+      background: transparent;
+      border: 1.5px solid rgba(244,63,94,0.4); color: rgba(244,63,94,0.6);
+      border-radius: 6px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-signout:hover { border-color:var(--pink); color:var(--pink); box-shadow: 0 0 12px var(--pink-glow); }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.58rem; letter-spacing: 2px;
+      color: var(--text-muted); text-transform: uppercase;
+      margin: 24px 0 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-title::after {
+      content:''; flex:1; height:1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    /* ── GAME GRID ── */
+    .games-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 6px;
+    }
+
+    .game-card {
+      position: relative;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+      padding: 22px 12px 18px;
+      text-align: center;
       cursor: pointer;
-      font-size: 0.8rem;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      overflow: hidden;
     }
-    .lb-tab.active { background: rgba(100,140,30,0.7); color:#fff; border-color:#a0c040; }
-    .lb-list { list-style:none; }
-    .lb-list li {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 7px 10px;
-      border-bottom: 1px solid rgba(100,120,40,0.2);
-      font-size: 0.85rem;
+    /* pixel corner deco */
+    .game-card::before, .game-card::after {
+      content:''; position:absolute; width:8px; height:8px;
+      border-color: var(--card-accent, var(--lavender)); border-style:solid; opacity:0.5;
     }
-    .lb-list li:first-child { color:#ffd700; }
-    .lb-list li:nth-child(2) { color:#c0c0c0; }
-    .lb-list li:nth-child(3) { color:#cd7f32; }
-    .lb-rank { width:24px; font-weight:bold; text-align:center; }
-    .lb-avatar { width:28px; height:28px; border-radius:50%; object-fit:cover; }
-    .lb-avatar-placeholder { width:28px; height:28px; border-radius:50%; background:rgba(100,140,40,0.4); display:flex; align-items:center; justify-content:center; font-size:0.75rem; }
-    .lb-name { flex:1; }
-    .lb-score { font-weight:bold; color:#c8e060; }
-    .lb-empty { color:#606840; font-size:0.85rem; padding:16px; text-align:center; }
+    .game-card::before { top:6px; right:6px; border-width:2px 2px 0 0; }
+    .game-card::after  { bottom:6px; left:6px; border-width:0 0 2px 2px; }
+
+    .game-card:hover:not(.locked) {
+      transform: translateY(-5px);
+      border-color: var(--card-accent, var(--lavender));
+      box-shadow: 0 10px 28px var(--card-shadow, var(--purple-glow)),
+                  0 0 0 1px var(--card-accent, var(--lavender));
+    }
+    .game-card.locked { opacity:0.42; cursor:not-allowed; filter:grayscale(0.3); }
+
+    .card-flappy  { --card-accent:var(--green);  --card-shadow:var(--green-glow); }
+    .card-hangman { --card-accent:var(--cyan);   --card-shadow:var(--cyan-glow); }
+    .card-raspia  { --card-accent:var(--gold);   --card-shadow:var(--gold-glow); }
+    .card-fire    { --card-accent:var(--pink);   --card-shadow:var(--pink-glow); }
+
+    .card-icon {
+      font-size: 2.5rem; display:block; margin-bottom:10px;
+      filter: drop-shadow(0 0 8px var(--card-accent, var(--lavender)));
+      transition: filter 0.2s;
+    }
+    .game-card:hover:not(.locked) .card-icon {
+      filter: drop-shadow(0 0 18px var(--card-accent, var(--lavender)));
+    }
+    .card-name {
+      font-family:'Fredoka',sans-serif; font-weight:700; font-size:1.08rem;
+      color:var(--text); margin-bottom:4px; line-height:1.2;
+    }
+    .card-sub { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.5px; }
+
+    .coming-tag {
+      position:absolute; top:8px; left:8px;
+      font-family:'Press Start 2P',monospace; font-size:0.3rem;
+      padding:4px 7px;
+      background:rgba(244,63,94,0.12); border:1px solid rgba(244,63,94,0.35);
+      color:var(--pink); border-radius:4px; letter-spacing:1px;
+    }
+
+    /* ── GAME FRAME ── */
+    #gameContainer { display:none; margin-bottom:20px; }
+    #gameContainer.visible { display:block; }
+
+    .back-btn {
+      display:flex; align-items:center; gap:8px;
+      font-family:'Press Start 2P',monospace; font-size:0.44rem; letter-spacing:1px;
+      color:var(--lavender); background:transparent;
+      border:1.5px solid var(--border); padding:9px 14px;
+      border-radius:8px; cursor:pointer; margin-bottom:10px;
+      transition:all 0.2s;
+    }
+    .back-btn:hover { border-color:var(--lavender); box-shadow:0 0 12px var(--purple-glow); color:white; }
+
+    #gameFrame {
+      width:100%; height:680px; border:none; border-radius:var(--r);
+      box-shadow: 0 0 0 1px var(--border), 0 0 30px var(--purple-glow);
+    }
+
+    /* ── LEADERBOARD ── */
+    .lb-tabs {
+      display:flex; gap:6px; margin-bottom:14px;
+      border-bottom:1px solid var(--border); padding-bottom:10px;
+    }
+    .lb-tab {
+      font-family:'Press Start 2P',monospace; font-size:0.38rem; letter-spacing:1px;
+      padding:8px 14px; background:transparent;
+      border:1.5px solid transparent; color:var(--text-muted);
+      border-radius:6px; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+    }
+    .lb-tab:hover { color:var(--lavender); border-color:var(--border); }
+    .lb-tab.active {
+      color:var(--lavender); border-color:var(--lavender);
+      background:rgba(124,58,237,0.12); box-shadow:0 0 14px var(--purple-glow);
+    }
+
+    .lb-board {
+      background:var(--bg-card); border:1.5px solid var(--border);
+      border-radius:var(--r); overflow:hidden;
+      box-shadow:inset 0 0 40px rgba(8,8,26,0.5);
+    }
+    .lb-header {
+      background:rgba(124,58,237,0.1); border-bottom:1px solid var(--border);
+      padding:10px 16px;
+      display:grid; grid-template-columns:40px 40px 1fr auto; gap:8px; align-items:center;
+    }
+    .lb-header span {
+      font-family:'Press Start 2P',monospace; font-size:0.33rem;
+      color:var(--text-muted); letter-spacing:1px; text-transform:uppercase;
+    }
+
+    .lb-row {
+      display:grid; grid-template-columns:40px 40px 1fr auto; gap:8px;
+      align-items:center; padding:12px 16px;
+      border-bottom:1px solid rgba(124,58,237,0.07);
+      transition:background 0.15s;
+      animation:row-in 0.3s ease both;
+    }
+    .lb-row:last-child { border-bottom:none; }
+    .lb-row:hover { background:rgba(124,58,237,0.06); }
+
+    @keyframes row-in {
+      from { opacity:0; transform:translateX(-8px); }
+      to   { opacity:1; transform:translateX(0); }
+    }
+
+    .lb-rank {
+      font-family:'Press Start 2P',monospace; font-size:0.5rem; text-align:center;
+    }
+    .lb-row:nth-child(2) .lb-rank { color:var(--gold); text-shadow:0 0 10px var(--gold-glow); }
+    .lb-row:nth-child(3) .lb-rank { color:#C0C0C0; text-shadow:0 0 8px rgba(192,192,192,0.4); }
+    .lb-row:nth-child(4) .lb-rank { color:#CD7F32; }
+    .lb-row:nth-child(n+5) .lb-rank { color:var(--text-muted); }
+
+    .lb-avatar {
+      width:34px; height:34px; border-radius:50%;
+      border:1.5px solid rgba(124,58,237,0.4); object-fit:cover;
+    }
+    .lb-avatar-ph {
+      width:34px; height:34px; border-radius:50%;
+      background:rgba(124,58,237,0.12);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1rem;
+      border:1.5px solid rgba(124,58,237,0.25);
+    }
+    .lb-name {
+      font-weight:600; font-size:0.88rem; color:var(--text);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .lb-score {
+      font-family:'Press Start 2P',monospace; font-size:0.52rem;
+      color:var(--green); text-shadow:0 0 10px var(--green-glow); white-space:nowrap;
+    }
+    .lb-empty {
+      padding:36px; text-align:center;
+      font-family:'Press Start 2P',monospace; font-size:0.4rem;
+      color:var(--text-muted); letter-spacing:1px; line-height:2.4;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align:center; margin-top:32px; padding-top:20px;
+      border-top:1px solid var(--border);
+    }
+    .footer p {
+      font-family:'Press Start 2P',monospace; font-size:0.36rem;
+      color:var(--text-muted); letter-spacing:1px; line-height:2.6;
+      animation:flicker 8s step-start infinite;
+    }
+    .heart { color:var(--pink); text-shadow:0 0 8px var(--pink-glow); }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">🎮 עולם דישי <span>פלטפורמת המשחקים</span></div>
-  <div id="authArea">
-    <button class="btn" id="loginBtn" onclick="handleAuth()">התחבר עם גוגל</button>
-  </div>
-</header>
+<canvas id="stars"></canvas>
 
-<h2>🕹️ המשחקים</h2>
-<div class="games-grid">
-  <div class="game-card" onclick="openGame('flying-dishi')">
-    <span class="emoji">🚀</span>
-    <div class="game-name">דישי המעופף</div>
-    <div class="game-sub">Flappy Dishi</div>
+<div class="wrapper">
+
+  <div class="hero">
+    <div class="hero-badge">🎂 יום הולדת שמח</div>
+    <h1 class="hero-title">עולם <span>דישי</span></h1>
+    <p class="hero-subtitle">INSERT COIN TO PLAY</p>
   </div>
-  <div class="game-card" onclick="openGame('dishi-hangman')">
-    <span class="emoji">🔤</span>
-    <div class="game-name">דיש תלוי</div>
-    <div class="game-sub">נחש את המילה</div>
+
+  <div class="auth-bar" id="authBar">
+    <button class="btn-insert" onclick="handleAuth()">PLAYER SELECT</button>
   </div>
-  <div class="game-card locked">
-    <span class="coming-soon">בקרוב</span>
-    <span class="emoji">👑</span>
-    <div class="game-name">מלך הרספיה</div>
-    <div class="game-sub">בקרוב...</div>
+
+  <div class="section-title">🕹 SELECT GAME</div>
+
+  <div class="games-grid" id="gamesGrid">
+    <div class="game-card card-flappy" onclick="openGame('flying-dishi')">
+      <span class="card-icon">🚀</span>
+      <div class="card-name">דישי המעופף</div>
+      <div class="card-sub">Flappy Dishi</div>
+    </div>
+    <div class="game-card card-hangman" onclick="openGame('dishi-hangman')">
+      <span class="card-icon">🔤</span>
+      <div class="card-name">דיש תלוי</div>
+      <div class="card-sub">נחש את המילה</div>
+    </div>
+    <div class="game-card card-raspia locked">
+      <span class="coming-tag">SOON</span>
+      <span class="card-icon">👑</span>
+      <div class="card-name">מלך הרספיה</div>
+      <div class="card-sub">בקרוב...</div>
+    </div>
+    <div class="game-card card-fire locked">
+      <span class="coming-tag">SOON</span>
+      <span class="card-icon">🔥</span>
+      <div class="card-name">דישי הכבאי</div>
+      <div class="card-sub">בקרוב...</div>
+    </div>
   </div>
-  <div class="game-card locked">
-    <span class="coming-soon">בקרוב</span>
-    <span class="emoji">🔥</span>
-    <div class="game-name">דישי הכבאי</div>
-    <div class="game-sub">בקרוב...</div>
+
+  <div id="gameContainer">
+    <button class="back-btn" onclick="closeGame()">← BACK</button>
+    <iframe id="gameFrame" allowfullscreen></iframe>
   </div>
+
+  <div class="section-title">🏆 HIGH SCORES</div>
+
+  <div class="lb-tabs">
+    <button class="lb-tab active" onclick="switchLbTab('flying-dishi', this)">🚀 המעופף</button>
+    <button class="lb-tab" onclick="switchLbTab('dishi-hangman', this)">🔤 תלוי</button>
+  </div>
+
+  <div class="lb-board">
+    <div class="lb-header">
+      <span>RANK</span><span></span><span>PLAYER</span><span>SCORE</span>
+    </div>
+    <ul id="lbList" style="list-style:none;margin:0;padding:0;">
+      <li class="lb-empty">LOADING...<br>אין ניקודים עדיין</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <p>© 2025 DISHI WORLD ARCADE<br>
+    MADE WITH <span class="heart">♥</span> AS A SURPRISE<br>
+    PRESS START TO PLAY</p>
+  </div>
+
 </div>
 
-<div id="gameContainer">
-  <button class="btn" id="backBtn" onclick="closeGame()">← חזרה ללובי</button>
-  <iframe id="gameFrame" allowfullscreen></iframe>
-</div>
-
-<h2>🏆 לידרבורד</h2>
-<div class="lb-tabs">
-  <button class="lb-tab active" onclick="switchLbTab('flying-dishi', this)">דישי המעופף</button>
-  <button class="lb-tab" onclick="switchLbTab('dishi-hangman', this)">דיש תלוי</button>
-</div>
-<ul class="lb-list" id="lbList"><li class="lb-empty">טוען...</li></ul>
+<script>
+(function(){
+  const c = document.getElementById('stars');
+  const x = c.getContext('2d');
+  let s = [];
+  function resize(){ c.width=innerWidth; c.height=innerHeight; }
+  function init(){
+    s = Array.from({length:130},()=>({
+      x:Math.random()*c.width, y:Math.random()*c.height,
+      r:Math.random()*1.4+0.2, a:Math.random(),
+      da:(Math.random()-0.5)*0.005, sp:Math.random()*0.07+0.02
+    }));
+  }
+  function draw(){
+    x.clearRect(0,0,c.width,c.height);
+    s.forEach(p=>{
+      p.a+=p.da; if(p.a<=0||p.a>=1)p.da*=-1;
+      p.y+=p.sp; if(p.y>c.height){p.y=0;p.x=Math.random()*c.width;}
+      x.beginPath(); x.arc(p.x,p.y,p.r,0,Math.PI*2);
+      x.fillStyle=`rgba(200,180,255,${p.a})`; x.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize(); init(); draw();
+  window.addEventListener('resize',()=>{resize();init();});
+})();
+</script>
 
 <script type="module">
   import { initAuth, signInWithGoogle, signOutUser } from './auth.js';
@@ -172,73 +454,67 @@
   initAuth((user) => {
     currentUser = user;
     window._currentUser = user;
-    const area = document.getElementById('authArea');
+    const bar = document.getElementById('authBar');
     if (user) {
-      area.innerHTML = `
-        <img src="${user.photoURL}" alt="">
-        <span>${user.displayName}</span>
-        <button class="btn" onclick="handleAuth()">התנתק</button>
+      bar.innerHTML = `
+        <img class="auth-avatar" src="${user.photoURL||''}" alt="">
+        <span class="auth-name">${user.displayName}</span>
+        <button class="btn-signout" onclick="handleAuth()">EXIT</button>
       `;
     } else {
-      area.innerHTML = `<button class="btn" onclick="handleAuth()">התחבר עם גוגל</button>`;
+      bar.innerHTML = `<button class="btn-insert" onclick="handleAuth()">PLAYER SELECT</button>`;
     }
   });
 
   window.handleAuth = async () => {
-    if (window._currentUser) {
-      await signOutUser();
-    } else {
-      await signInWithGoogle();
-    }
+    if (window._currentUser) await signOutUser();
+    else await signInWithGoogle();
   };
 
   window.openGame = (gameId) => {
-    const gc = document.getElementById('gameContainer');
-    const frame = document.getElementById('gameFrame');
-    frame.src = `games/${gameId}.html`;
-    gc.classList.add('visible');
-    document.querySelector('.games-grid').style.display = 'none';
+    document.getElementById('gamesGrid').style.display = 'none';
+    document.getElementById('gameContainer').classList.add('visible');
+    document.getElementById('gameFrame').src = `games/${gameId}.html`;
   };
 
   window.closeGame = () => {
-    const gc = document.getElementById('gameContainer');
-    const frame = document.getElementById('gameFrame');
-    frame.src = '';
-    gc.classList.remove('visible');
-    document.querySelector('.games-grid').style.display = 'grid';
+    document.getElementById('gameContainer').classList.remove('visible');
+    document.getElementById('gameFrame').src = '';
+    document.getElementById('gamesGrid').style.display = 'grid';
   };
 
   window.switchLbTab = (gameId, btn) => {
-    document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.lb-tab').forEach(t=>t.classList.remove('active'));
     btn.classList.add('active');
     loadLeaderboard(gameId);
   };
 
   function loadLeaderboard(gameId) {
     if (lbUnsub) lbUnsub();
+    document.getElementById('lbList').innerHTML =
+      '<li class="lb-empty">LOADING...<br>טוען ניקודים</li>';
     lbUnsub = subscribeTopScores(gameId, renderLeaderboard);
   }
 
   function renderLeaderboard(scores) {
     const list = document.getElementById('lbList');
     if (!scores.length) {
-      list.innerHTML = '<li class="lb-empty">אין ניקודים עדיין — היה הראשון!</li>';
+      list.innerHTML = `<li class="lb-empty">NO DATA YET<br>אין ניקודים עדיין<br>היה הראשון!</li>`;
       return;
     }
-    const medals = ['🥇','🥈','🥉'];
-    list.innerHTML = scores.map((s, i) => `
-      <li>
-        <span class="lb-rank">${medals[i] || (i+1)}</span>
+    const ranks = ['1ST','2ND','3RD'];
+    list.innerHTML = scores.map((s,i) => `
+      <li class="lb-row" style="animation-delay:${i*50}ms">
+        <span class="lb-rank">${ranks[i]||(i+1)}</span>
         ${s.photoURL
           ? `<img class="lb-avatar" src="${s.photoURL}" alt="">`
-          : `<div class="lb-avatar-placeholder">😊</div>`}
+          : `<div class="lb-avatar-ph">🎮</div>`}
         <span class="lb-name">${s.name}</span>
-        <span class="lb-score">${s.score}</span>
+        <span class="lb-score">${String(s.score).padStart(5,'0')}</span>
       </li>
     `).join('');
   }
 
-  // Load default leaderboard on startup
   loadLeaderboard('flying-dishi');
 </script>
 </body>
