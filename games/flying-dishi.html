@@ -190,7 +190,7 @@ let musicEnabled  = false;
 let musicLoaded   = false;
 
 bgMusic.volume = 0.32;   // ← הוחלש
-bgMusic.src    = "Dish-Dish Ninja Drum'n'Bass.mp3";
+bgMusic.src    = "../assets/Dish-Dish Ninja Drum'n'Bass.mp3";
 bgMusic.oncanplaythrough = () => {
     if (musicLoaded) return;
     musicLoaded = true;
@@ -213,7 +213,7 @@ musicToggle.addEventListener('click', () => {
 
 // ─── Death Sound ─────────────────────────────────────────────────────────────
 const deathAudio = new Audio();
-['אפשר לקבל סודה.MP3','אפשר לקבל סודה.mp3'].forEach(f => {
+['../assets/אפשר לקבל סודה.MP3','../assets/אפשר לקבל סודה.mp3'].forEach(f => {
     const t = new Audio(f);
     t.oncanplaythrough = () => { if (!deathAudio.src || deathAudio.readyState < 2) deathAudio.src = f; };
 });
