@@ -108,6 +108,9 @@
   let pendingMatches = new Set();
   let cascadeLevel   = 0;
   let swapAnim       = null; // { r1,c1,r2,c2,progress } — progress 0→1
+  let score       = 0;
+  let scorePopups = []; // { x, y, text, alpha, vy } — floating +N labels
+  let removeTimer = 0;
 
   function mkTile(type) {
     return { type, y: 0, alpha: 1, scale: 1, removing: false };
@@ -165,8 +168,30 @@
         startRemoving(pendingMatches);
       }
     }
-    // Other phases filled in Tasks 5-7
+  } else if (gamePhase === 'REMOVING') {
+    removeTimer -= dt;
+    // Flash animation
+    const flashAlpha = 0.3 + 0.7 * Math.abs(Math.sin(removeTimer * 30));
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (board[r][c]?.removing) board[r][c].alpha = flashAlpha;
+      }
+    }
+    // Animate score popups
+    scorePopups.forEach(p => { p.y += p.vy * dt; p.alpha -= dt * 2; });
+    scorePopups = scorePopups.filter(p => p.alpha > 0);
+
+    if (removeTimer <= 0) {
+      // Remove tiles
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (board[r][c]?.removing) board[r][c] = null;
+        }
+      }
+      startFalling();
+    }
   }
+  // Other phases filled in Tasks 6-7
 
   function drawTile(type, px, py, alpha, scale) {
     if (alpha <= 0 || scale <= 0) return;
@@ -229,6 +254,18 @@
         drawTile(t.type, px, py, t.alpha, t.scale);
       }
     }
+    // Score popups
+    scorePopups.forEach(p => {
+      ctx.save();
+      ctx.globalAlpha  = Math.max(0, p.alpha);
+      ctx.font         = 'bold 20px Fredoka One, cursive';
+      ctx.fillStyle    = '#ffd700';
+      ctx.textAlign    = 'center';
+      ctx.shadowColor  = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur   = 4;
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    });
     // Selection highlight
     if (selected && gamePhase === 'IDLE') {
       const { r, c } = selected;
@@ -243,7 +280,7 @@
     }
   }
 
-  function restartGame() { lastTime = 0; selected = null; gamePhase = 'IDLE'; initBoard(); render(); }
+  function restartGame() { lastTime = 0; selected = null; gamePhase = 'IDLE'; score = 0; scorePopups = []; document.getElementById('score-val').textContent = 0; initBoard(); render(); }
   document.getElementById('restart-btn').addEventListener('click', restartGame);
   function swapCells(r1, c1, r2, c2) {
     const tmp    = board[r1][c1];
@@ -298,12 +335,34 @@
   }
 
   function startRemoving(matches) {
+    removeTimer = REMOVE_DURATION;
     matches.forEach(key => {
       const [r, c] = key.split(',').map(Number);
       if (board[r][c]) board[r][c].removing = true;
     });
-    // Implemented further in Task 5
-    console.log('removing', matches.size, 'tiles');
+    // Score: 30 per tile × 1.5^cascadeLevel
+    const pts = Math.round(matches.size * 30 * Math.pow(1.5, cascadeLevel));
+    score += pts;
+    document.getElementById('score-val').textContent = score;
+    // Score popup at center of matched tiles
+    let sumR = 0, sumC = 0;
+    matches.forEach(key => { const [r, c] = key.split(',').map(Number); sumR += r; sumC += c; });
+    const avgR = sumR / matches.size, avgC = sumC / matches.size;
+    scorePopups.push({
+      x: (avgC + 0.5) * TILE_SIZE,
+      y: (avgR + 0.5) * TILE_SIZE,
+      text: `+${pts}`,
+      alpha: 1,
+      vy: -80,
+    });
+  }
+
+  function startFalling() {
+    gamePhase = 'FALLING';
+    // Implemented in Task 6
+    console.log('falling...');
+    // Temporary: go back to IDLE so game stays playable
+    gamePhase = 'IDLE';
   }
 
   function getCellFromEvent(e) {
