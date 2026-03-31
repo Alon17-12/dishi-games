@@ -80,7 +80,7 @@
   <div id="overlay">
     <div id="ov-title">⏰ נגמר הזמן!</div>
     <div id="ov-score"></div>
-    <button class="btn" onclick="restartGame()">🔄 שחק שוב</button>
+    <button class="btn" id="restart-btn">🔄 שחק שוב</button>
   </div>
 
   <script type="module">
@@ -105,15 +105,16 @@
     const maxW  = Math.min(window.innerWidth - 16, 400);
     TILE_SIZE   = Math.floor(maxW / COLS);
     BOARD_PX    = TILE_SIZE * COLS;
-    canvas.width  = BOARD_PX;
-    canvas.height = BOARD_PX;
+    canvas.width  = TILE_SIZE * COLS;
+    canvas.height = TILE_SIZE * ROWS;
   }
   resizeCanvas();
-  window.addEventListener('resize', () => { resizeCanvas(); });
+  window.addEventListener('resize', () => { resizeCanvas(); render(); });
 
   // ─── Game loop placeholder ─────────────────────────────────────────────────
   let lastTime = 0;
   function gameLoop(ts) {
+    if (lastTime === 0) { lastTime = ts; render(); requestAnimationFrame(gameLoop); return; }
     const dt = Math.min((ts - lastTime) / 1000, 0.05); // cap at 50ms
     lastTime = ts;
     update(dt);
@@ -122,7 +123,7 @@
   }
   function update(dt) { /* filled in later tasks */ }
   function render()   {
-    ctx.clearRect(0, 0, BOARD_PX, BOARD_PX);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     // placeholder grid
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -131,7 +132,8 @@
       }
     }
   }
-  window.restartGame = () => {};
+  function restartGame() { lastTime = 0; render(); }
+  document.getElementById('restart-btn').addEventListener('click', restartGame);
   requestAnimationFrame(gameLoop);
   </script>
 </body>
