@@ -35,104 +35,123 @@
     #score-area {
       color: #ffb88c;
       font-size: 0.9rem;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
       font-weight: 700;
     }
-    #timer-area {
-      font-size: 0.9rem;
-      margin-bottom: 10px;
-      font-weight: 700;
-      color: #ffb88c;
-      transition: color 0.3s;
-    }
-    .timer-urgent { color: #ff4444 !important; }
 
-    /* Gallows SVG — centered, no side panel */
+    /* ── Timer ────────────────────────────────── */
+    #timer-area {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      color: #ffb88c;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1rem;
+    }
+    #timer-label { font-size: 1.4rem; }
+    #timerDisplay {
+      font-size: 3.4rem;
+      line-height: 1;
+      display: inline-block;
+      min-width: 74px;
+      text-align: center;
+      color: #ffd700;
+      transition: color 0.25s;
+    }
+    @keyframes tick-bounce {
+      0%   { transform: scale(1); }
+      28%  { transform: scale(1.25); }
+      60%  { transform: scale(0.88); }
+      100% { transform: scale(1); }
+    }
+    .tick { animation: tick-bounce 0.3s ease; }
+
+    /* Urgent: last 10 seconds */
+    .timer-urgent #timerDisplay {
+      color: #ff3333;
+      animation: urgent-pulse 0.42s ease infinite alternate;
+    }
+    @keyframes urgent-pulse {
+      from { transform: scale(1);    filter: none; }
+      to   { transform: scale(1.14); filter: drop-shadow(0 0 10px rgba(255,51,51,0.9)); }
+    }
+    #urgent-overlay {
+      position: fixed; inset: 0; pointer-events: none; z-index: 50;
+      display: none;
+      animation: overlay-pulse 0.42s ease infinite alternate;
+    }
+    #urgent-overlay.show { display: block; }
+    @keyframes overlay-pulse {
+      from { background: transparent; }
+      to   { background: rgba(255,0,0,0.05); }
+    }
+
+    /* Bonus flash */
+    #bonus-flash {
+      position: fixed; top: 108px; left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Fredoka One', cursive; font-size: 1.5rem;
+      color: #00ff99; text-shadow: 0 0 14px rgba(0,255,153,0.75);
+      opacity: 0; transition: opacity 0.15s;
+      pointer-events: none; z-index: 200;
+    }
+    #bonus-flash.show { opacity: 1; }
+
+    /* Gallows SVG */
     #hangman-svg {
       display: block;
-      margin: 0 auto 10px;
-      width: 180px;
-      height: 210px;
+      margin: 0 auto 8px;
+      width: 160px;
+      height: 185px;
       filter: drop-shadow(0 0 10px rgba(255,107,53,0.3));
     }
-
     .g-base {
-      stroke: #ff8c42;
-      stroke-width: 3.5;
-      stroke-linecap: round;
-      fill: none;
+      stroke: #ff8c42; stroke-width: 3.5; stroke-linecap: round; fill: none;
     }
-
-    /* Body-part group: hidden until wrong guess */
-    .g-part {
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
+    .g-part { opacity: 0; transition: opacity 0.3s ease; }
     .g-part.on { opacity: 1; }
-
-    /* Lines inside body-part groups */
-    .g-line {
-      stroke: #ff6b35;
-      stroke-width: 3;
-      stroke-linecap: round;
-      fill: none;
-    }
+    .g-line { stroke: #ff6b35; stroke-width: 3; stroke-linecap: round; fill: none; }
 
     /* Lives */
     #lives {
-      font-size: 1.1rem;
-      margin-bottom: 6px;
+      font-size: 1rem;
+      margin-bottom: 4px;
       letter-spacing: 3px;
       text-align: center;
-      min-height: 28px;
+      min-height: 24px;
     }
 
     /* Wrong letters */
     #wrong-letters {
       color: rgba(220,80,60,0.75);
       font-size: 0.8rem;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       min-height: 18px;
       text-align: center;
       letter-spacing: 2px;
       font-weight: 700;
     }
 
-    /* Word display
-       dir="rtl" on html → flex-direction: row already lays items right→left.
-       row-reverse would flip to left→right (bug!), so we just use row. */
+    /* Word display — RTL: row = right→left */
     #word-display {
       display: flex;
-      flex-direction: row;   /* RTL doc: row = right to left */
+      flex-direction: row;
       flex-wrap: wrap;
       justify-content: center;
       gap: 5px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       min-height: 50px;
       max-width: 360px;
     }
-
     .letter-box {
-      width: 30px;
-      height: 42px;
+      width: 30px; height: 42px;
       border-bottom: 3px solid rgba(255,140,66,0.55);
-      text-align: center;
-      font-size: 1.45rem;
-      font-weight: 900;
-      color: #fff5e0;
-      line-height: 42px;
+      text-align: center; font-size: 1.45rem;
+      font-weight: 900; color: #fff5e0; line-height: 42px;
     }
-
-    /* Space box — thinner, no underline */
-    .letter-box.space {
-      width: 16px;
-      border-bottom: none;
-    }
-
-    .letter-box.pop {
-      animation: pop 0.35s ease forwards;
-    }
-
+    .letter-box.space { width: 16px; border-bottom: none; }
+    .letter-box.pop { animation: pop 0.35s ease forwards; }
     @keyframes pop {
       0%   { transform: scale(1.5) translateY(-4px); color: #ff9a5c; }
       60%  { transform: scale(0.9); }
@@ -141,41 +160,26 @@
 
     /* Hint */
     #hint-text {
-      color: #ffb88c;
-      font-size: 0.85rem;
-      margin-bottom: 12px;
-      min-height: 20px;
-      text-align: center;
-      opacity: 0.85;
+      color: #ffb88c; font-size: 0.85rem; margin-bottom: 10px;
+      min-height: 20px; text-align: center; opacity: 0.85;
     }
 
     /* Keyboard */
     #keyboard {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 5px;
-      max-width: 360px;
-      margin-bottom: 12px;
-      direction: rtl;
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 5px; max-width: 360px; margin-bottom: 10px; direction: rtl;
     }
-
     .key-btn {
       background: rgba(255,107,53,0.1);
       border: 1.5px solid rgba(255,140,66,0.3);
       color: #ffd0a0;
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-family: 'Nunito', sans-serif;
-      font-weight: 700;
-      cursor: pointer;
+      width: 36px; height: 36px; border-radius: 8px;
+      font-size: 1rem; font-family: 'Nunito', sans-serif;
+      font-weight: 700; cursor: pointer;
       transition: background 0.13s, transform 0.1s, border-color 0.13s;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
-
     .key-btn:hover:not(:disabled) {
       background: rgba(255,107,53,0.32);
       border-color: rgba(255,140,66,0.65);
@@ -183,8 +187,8 @@
     }
     .key-btn:active:not(:disabled) { transform: scale(0.9); }
     .key-btn:disabled { opacity: 0.18; cursor: default; transform: none !important; }
-    .key-btn.wrong   { background: rgba(200,50,30,0.28); border-color: rgba(220,80,60,0.45); color: rgba(255,140,120,0.55); }
-    .key-btn.correct { background: rgba(60,200,80,0.18); border-color: rgba(80,220,100,0.45); color: rgba(140,255,150,0.85); }
+    .key-btn.wrong  { background: rgba(200,50,30,0.28); border-color: rgba(220,80,60,0.45); color: rgba(255,140,120,0.55); }
+    .key-btn.correct{ background: rgba(60,200,80,0.18); border-color: rgba(80,220,100,0.45); color: rgba(140,255,150,0.85); }
 
     @keyframes shake {
       0%,100% { transform: translateX(0); }
@@ -195,34 +199,58 @@
     }
     .shake { animation: shake 0.38s ease; }
 
-    /* Result */
+    /* Result overlay */
     #result {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(5,2,18,0.93);
+      display: none; position: fixed; inset: 0;
+      background: rgba(5,2,18,0.94);
       flex-direction: column; align-items: center; justify-content: center;
-      gap: 18px; z-index: 100; padding: 32px 24px;
+      gap: 14px; z-index: 100; padding: 28px 20px;
+      overflow-y: auto;
     }
     #result.show { display: flex; }
 
     #result-title {
       font-family: 'Fredoka One', cursive;
-      font-size: 3rem; text-align: center; line-height: 1.1;
+      font-size: 2.6rem; text-align: center; line-height: 1.1;
     }
-
     #result-reveal {
-      width: 130px; height: 130px; border-radius: 50%;
+      width: 100px; height: 100px; border-radius: 50%;
       overflow: hidden;
       border: 3px solid rgba(255,180,80,0.6);
-      box-shadow: 0 0 32px rgba(255,140,53,0.35);
+      box-shadow: 0 0 28px rgba(255,140,53,0.35);
     }
     #result-reveal img { width: 100%; height: 100%; object-fit: cover; }
+    #result-word { color: #ffb88c; font-size: 1rem; text-align: center; }
 
-    #result-word  { color: #ffb88c; font-size: 1rem; text-align: center; }
+    /* Session-end stats */
+    #result-stats {
+      display: none; width: 100%; max-width: 340px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px; padding: 14px 18px;
+    }
+    #result-stats.show { display: block; }
+    .stat-line {
+      font-size: 0.88rem; color: #f0e0d0;
+      line-height: 2; display: flex; gap: 6px;
+    }
+    .stat-line b { color: #ffd700; margin-right: auto; }
+    .stat-words {
+      font-size: 0.78rem; color: rgba(240,224,208,0.7);
+      line-height: 1.7; margin-top: 2px;
+      word-break: break-word;
+    }
+    .stat-final {
+      font-family: 'Fredoka One', cursive; font-size: 1.6rem;
+      color: #ffd700; text-align: center; margin-top: 6px;
+      text-shadow: 0 0 16px rgba(255,215,0,0.45);
+    }
+
     #result-score {
       font-family: 'Fredoka One', cursive;
-      font-size: 2rem; color: #ffd700;
+      font-size: 1.8rem; color: #ffd700;
       text-shadow: 0 0 16px rgba(255,215,0,0.4);
+      text-align: center;
     }
 
     .btn {
@@ -238,26 +266,27 @@
 </head>
 <body>
 
+<div id="urgent-overlay"></div>
+<div id="bonus-flash"></div>
+
 <h1>🎭 דיש תלוי</h1>
 <div id="score-area">ניקוד: <span id="scoreDisplay">0</span></div>
-<div id="timer-area">⏱ <span id="timerDisplay">60</span></div>
+<div id="timer-area">
+  <span id="timer-label">⏱</span>
+  <span id="timerDisplay">60</span>
+</div>
 
 <!-- Gallows SVG: Dishi's photo IS the head -->
 <svg id="hangman-svg" viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Clip Dishi's photo to the head circle -->
     <clipPath id="head-clip">
       <circle cx="76" cy="37" r="13"/>
     </clipPath>
   </defs>
-
-  <!-- Gallows — always visible -->
   <line class="g-base" x1="10"  y1="144" x2="95"  y2="144"/>
   <line class="g-base" x1="26"  y1="144" x2="26"  y2="6"/>
   <line class="g-base" x1="26"  y1="6"   x2="76"  y2="6"/>
   <line class="g-base" x1="76"  y1="6"   x2="76"  y2="22"/>
-
-  <!-- Wrong guess 1: Dishi's head (photo clipped to circle) -->
   <g id="part-head" class="g-part">
     <image href="../assets/dishi.png"
            x="63" y="24" width="26" height="26"
@@ -265,31 +294,11 @@
            preserveAspectRatio="xMidYMid slice"/>
     <circle cx="76" cy="37" r="13" fill="none" stroke="#ffaa66" stroke-width="2"/>
   </g>
-
-  <!-- Wrong guess 2: body -->
-  <g id="part-body" class="g-part">
-    <line class="g-line" x1="76" y1="50" x2="76" y2="88"/>
-  </g>
-
-  <!-- Wrong guess 3: left arm -->
-  <g id="part-arm-l" class="g-part">
-    <line class="g-line" x1="76" y1="60" x2="56" y2="76"/>
-  </g>
-
-  <!-- Wrong guess 4: right arm -->
-  <g id="part-arm-r" class="g-part">
-    <line class="g-line" x1="76" y1="60" x2="96" y2="76"/>
-  </g>
-
-  <!-- Wrong guess 5: left leg -->
-  <g id="part-leg-l" class="g-part">
-    <line class="g-line" x1="76" y1="88" x2="60" y2="112"/>
-  </g>
-
-  <!-- Wrong guess 6: right leg -->
-  <g id="part-leg-r" class="g-part">
-    <line class="g-line" x1="76" y1="88" x2="92" y2="112"/>
-  </g>
+  <g id="part-body"  class="g-part"><line class="g-line" x1="76" y1="50" x2="76" y2="88"/></g>
+  <g id="part-arm-l" class="g-part"><line class="g-line" x1="76" y1="60" x2="56" y2="76"/></g>
+  <g id="part-arm-r" class="g-part"><line class="g-line" x1="76" y1="60" x2="96" y2="76"/></g>
+  <g id="part-leg-l" class="g-part"><line class="g-line" x1="76" y1="88" x2="60" y2="112"/></g>
+  <g id="part-leg-r" class="g-part"><line class="g-line" x1="76" y1="88" x2="92" y2="112"/></g>
 </svg>
 
 <div id="lives"></div>
@@ -303,7 +312,8 @@
   <div id="result-reveal"><img src="../assets/dishi.png" alt="דישי"></div>
   <div id="result-word"></div>
   <div id="result-score"></div>
-  <button class="btn" onclick="startNewRound()">🔄 משחק נוסף</button>
+  <div id="result-stats"></div>
+  <button class="btn" id="result-btn" style="display:none">🎮 משחק חדש</button>
 </div>
 
 <script type="module">
@@ -314,12 +324,9 @@ async function trySaveScore(score) {
       import('../firebase-config.js'),
     ]);
     await saveScore('dishi-hangman', auth.currentUser, score);
-  } catch (e) {
-    console.warn('Score not saved:', e);
-  }
+  } catch (e) { console.warn('Score not saved:', e); }
 }
 
-// Hebrew unicode range
 const isHebrew = ch => /[\u05D0-\u05EA]/.test(ch);
 
 const WORDS = [
@@ -342,40 +349,49 @@ const WORDS = [
   { word: 'תקלות בינוי',     hint: 'בעיות שקורות בשיפוצים' },
 ];
 
-const PARTS = ['part-head','part-body','part-arm-l','part-arm-r','part-leg-l','part-leg-r'];
-const MAX_WRONG = 6;
-const ALEPH_BET     = 'אבגדהוזחטיכלמנסעפצקרשת';
-const FINALS        = 'םךןץף';
+const PARTS      = ['part-head','part-body','part-arm-l','part-arm-r','part-leg-l','part-leg-r'];
+const MAX_WRONG  = 6;
+const ALEPH_BET  = 'אבגדהוזחטיכלמנסעפצקרשת';
+const FINALS     = 'םךןץף';
 const FINAL_TO_BASE = { 'ם':'מ', 'ך':'כ', 'ן':'נ', 'ץ':'צ', 'ף':'פ' };
-const ROUND_TIME    = 60;
+const ROUND_TIME = 60;   // initial session seconds
+const BONUS_TIME = 5;    // seconds added per correct word
 
 function normalizeLetter(ch) { return FINAL_TO_BASE[ch] || ch; }
-function normalizeWord(w) { return w.split('').map(normalizeLetter).join(''); }
+function normalizeWord(w)    { return w.split('').map(normalizeLetter).join(''); }
 
+// ── State ────────────────────────────────────────────────────────
 let state = { word:'', hint:'', guessed:new Set(), wrongCount:0, score:0, roundScore:0 };
-let usedWords = new Set();
+let usedWords     = new Set();
 let timerInterval = null;
 let timeLeft      = ROUND_TIME;
+let sessionActive = false;
 
-function pickWord() {
-  if (usedWords.size >= WORDS.length) usedWords.clear();
-  let w;
-  do { w = WORDS[Math.floor(Math.random() * WORDS.length)]; } while (usedWords.has(w.word));
-  usedWords.add(w.word);
-  return w;
-}
+// Session statistics
+let session = {
+  correctCount:  0,
+  correctWords:  [],   // [{ word, timeSec }]
+  roundStart:    0,    // Date.now() at word start
+  sessionStart:  0,    // Date.now() at session start
+};
 
+// ── Timer ─────────────────────────────────────────────────────────
 function startTimer() {
   clearInterval(timerInterval);
-  timeLeft = ROUND_TIME;
-  updateTimerDisplay();
+  updateTimerDisplay(false);
   timerInterval = setInterval(() => {
     timeLeft--;
-    updateTimerDisplay();
+    updateTimerDisplay(true); // tick animation
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
       timerInterval = null;
-      setTimeout(() => showResult(false), 100);
+      timeLeft = 0;
+      if (sessionActive) {
+        sessionActive = false;
+        // If mid-word overlay is showing, close it first
+        document.getElementById('result').classList.remove('show');
+        setTimeout(showSessionEnd, 150);
+      }
     }
   }, 1000);
 }
@@ -385,26 +401,76 @@ function stopTimer() {
   timerInterval = null;
 }
 
-function updateTimerDisplay() {
-  document.getElementById('timerDisplay').textContent = timeLeft;
+let _bonusFlashTimer = null;
+function showBonusFlash(text) {
+  const el = document.getElementById('bonus-flash');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(_bonusFlashTimer);
+  _bonusFlashTimer = setTimeout(() => el.classList.remove('show'), 1400);
+}
+
+function updateTimerDisplay(tick = false) {
+  const el   = document.getElementById('timerDisplay');
   const area = document.getElementById('timer-area');
-  if (timeLeft <= 10) area.classList.add('timer-urgent');
-  else                area.classList.remove('timer-urgent');
+  const urg  = document.getElementById('urgent-overlay');
+  el.textContent = Math.max(0, timeLeft);
+  if (tick) {
+    el.classList.remove('tick');
+    void el.offsetWidth; // reflow to restart animation
+    el.classList.add('tick');
+  }
+  if (timeLeft <= 10) {
+    area.classList.add('timer-urgent');
+    urg.classList.add('show');
+  } else {
+    area.classList.remove('timer-urgent');
+    urg.classList.remove('show');
+  }
+}
+
+// ── Word picking ──────────────────────────────────────────────────
+function pickWord() {
+  if (usedWords.size >= WORDS.length) usedWords.clear();
+  let w;
+  do { w = WORDS[Math.floor(Math.random() * WORDS.length)]; } while (usedWords.has(w.word));
+  usedWords.add(w.word);
+  return w;
+}
+
+// ── Session lifecycle ─────────────────────────────────────────────
+function startSession() {
+  stopTimer();
+  state.score   = 0;
+  session.correctCount = 0;
+  session.correctWords = [];
+  session.sessionStart = Date.now();
+  sessionActive        = true;
+  usedWords.clear();
+  timeLeft = ROUND_TIME;
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('urgent-overlay').classList.remove('show');
+  startTimer();
+  startNewRound();
 }
 
 function startNewRound() {
+  if (!sessionActive) return;
   const { word, hint } = pickWord();
   state.guessed    = new Set();
   state.wrongCount = 0;
   state.roundScore = word.split('').filter(isHebrew).length * 15;
-  state.word = word;
-  state.hint = hint;
+  state.word       = word;
+  state.hint       = hint;
+  session.roundStart = Date.now();
   document.getElementById('result').classList.remove('show');
+  document.getElementById('result-btn').style.display = 'none';
+  document.getElementById('result-stats').classList.remove('show');
   PARTS.forEach(id => document.getElementById(id).classList.remove('on'));
-  startTimer();
   renderAll();
 }
 
+// ── Render ────────────────────────────────────────────────────────
 function renderAll() {
   renderWord();
   renderLives();
@@ -415,25 +481,23 @@ function renderAll() {
 }
 
 function renderWord() {
-  const display  = document.getElementById('word-display');
-  const prevBoxes = display.querySelectorAll('.letter-box');
-  const oldRevealedIdx = new Set(
+  const display    = document.getElementById('word-display');
+  const prevBoxes  = display.querySelectorAll('.letter-box');
+  const oldRevealed = new Set(
     [...prevBoxes].map((el, i) => (el.textContent.trim() ? i : null)).filter(x => x !== null)
   );
-
   display.innerHTML = state.word.split('').map((ch, i) => {
     const isHebrewChar = isHebrew(ch);
     const revealed = !isHebrewChar || state.guessed.has(normalizeLetter(ch));
-    const isNew    = revealed && isHebrewChar && !oldRevealedIdx.has(i);
+    const isNew    = revealed && isHebrewChar && !oldRevealed.has(i);
     const spaceClass = (!isHebrewChar && ch !== '\u05f4') ? ' space' : '';
     return `<div class="letter-box${spaceClass}${isNew ? ' pop' : ''}">${revealed ? ch : ''}</div>`;
   }).join('');
 }
 
 function renderLives() {
-  const remaining = MAX_WRONG - state.wrongCount;
-  document.getElementById('lives').textContent =
-    '❤️'.repeat(remaining) + '🖤'.repeat(state.wrongCount);
+  const rem = MAX_WRONG - state.wrongCount;
+  document.getElementById('lives').textContent = '❤️'.repeat(rem) + '🖤'.repeat(state.wrongCount);
 }
 
 function renderWrongLetters() {
@@ -444,21 +508,17 @@ function renderWrongLetters() {
 }
 
 function renderKeyboard() {
-  const kb      = document.getElementById('keyboard');
+  const kb       = document.getElementById('keyboard');
   const normWord = normalizeWord(state.word);
-
   function keyHTML(ch) {
-    const norm    = normalizeLetter(ch);
+    const norm      = normalizeLetter(ch);
     const isGuessed = state.guessed.has(norm);
-    const inWord  = normWord.includes(norm);
-    const isWrong = isGuessed && !inWord;
-    const isRight = isGuessed && inWord;
+    const inWord    = normWord.includes(norm);
     let cls = 'key-btn';
-    if (isWrong) cls += ' wrong';
-    if (isRight) cls += ' correct';
+    if (isGuessed && !inWord) cls += ' wrong';
+    if (isGuessed && inWord)  cls += ' correct';
     return `<button class="${cls}" ${isGuessed ? 'disabled' : ''} onclick="guess('${ch}')">${ch}</button>`;
   }
-
   kb.innerHTML =
     ALEPH_BET.split('').map(keyHTML).join('') +
     '<div style="width:100%;height:4px"></div>' +
@@ -469,6 +529,88 @@ function showGallows() {
   PARTS.slice(0, state.wrongCount).forEach(id => document.getElementById(id).classList.add('on'));
 }
 
+// ── Per-word result (brief, auto-advance) ─────────────────────────
+function showWordResult(won) {
+  const wordGuessed = state.word;
+
+  if (won) {
+    const timeSec = Math.round((Date.now() - session.roundStart) / 1000);
+    const earned  = state.roundScore + Math.round(timeLeft * 1.5);
+    state.score  += earned;
+
+    // Bonus time
+    timeLeft = Math.min(timeLeft + BONUS_TIME, 180);
+    updateTimerDisplay(false);
+    showBonusFlash(`+${BONUS_TIME}s ⏱`);
+
+    // Record
+    session.correctCount++;
+    session.correctWords.push({ word: wordGuessed, timeSec });
+
+    document.getElementById('scoreDisplay').textContent = state.score;
+    document.getElementById('result-title').textContent = '🎉 כל הכבוד!';
+    document.getElementById('result-word').textContent  = wordGuessed;
+    document.getElementById('result-score').textContent = `+${earned} נקודות`;
+    document.getElementById('result-stats').classList.remove('show');
+    document.getElementById('result-btn').style.display = 'none';
+    document.getElementById('result').classList.add('show');
+
+    setTimeout(() => {
+      document.getElementById('result').classList.remove('show');
+      startNewRound();
+    }, 1300);
+
+  } else {
+    // Lives exhausted (not timer — timer triggers showSessionEnd directly)
+    document.getElementById('result-title').textContent = '💔 אוי לא...';
+    document.getElementById('result-word').textContent  = `המילה הייתה: ${wordGuessed}`;
+    document.getElementById('result-score').textContent = '';
+    document.getElementById('result-stats').classList.remove('show');
+    document.getElementById('result-btn').style.display = 'none';
+    document.getElementById('result').classList.add('show');
+
+    setTimeout(() => {
+      document.getElementById('result').classList.remove('show');
+      startNewRound();
+    }, 1700);
+  }
+}
+
+// ── Session end ────────────────────────────────────────────────────
+function showSessionEnd() {
+  stopTimer();
+  document.getElementById('urgent-overlay').classList.remove('show');
+  document.getElementById('timer-area').classList.remove('timer-urgent');
+
+  const totalSec = Math.round((Date.now() - session.sessionStart) / 1000);
+  const avgSec   = session.correctCount > 0
+    ? Math.round(session.correctWords.reduce((s, w) => s + w.timeSec, 0) / session.correctCount)
+    : 0;
+
+  const wordListHTML = session.correctWords.length
+    ? session.correctWords.map(w => `${w.word} (${w.timeSec}s)`).join(' &nbsp;•&nbsp; ')
+    : '—';
+
+  const statsEl = document.getElementById('result-stats');
+  statsEl.innerHTML = `
+    <div class="stat-line">✅ תשובות נכונות: <b>${session.correctCount}</b></div>
+    <div class="stat-line">⚡ זמן ממוצע לתשובה: <b>${avgSec}s</b></div>
+    <div class="stat-line">⏱ זמן כולל: <b>${totalSec}s</b></div>
+    <div class="stat-words">📋 ${wordListHTML}</div>
+    <div class="stat-final">🏆 ${state.score} נקודות</div>
+  `;
+
+  document.getElementById('result-title').textContent = '⏰ נגמר הזמן!';
+  document.getElementById('result-word').textContent  = '';
+  document.getElementById('result-score').textContent = '';
+  statsEl.classList.add('show');
+  document.getElementById('result-btn').style.display = 'inline-block';
+  document.getElementById('result').classList.add('show');
+
+  trySaveScore(state.score);
+}
+
+// ── Guess handler ─────────────────────────────────────────────────
 window.guess = (ch) => {
   const norm = normalizeLetter(ch);
   if (state.guessed.has(norm)) return;
@@ -485,34 +627,19 @@ window.guess = (ch) => {
     svg.classList.add('shake');
   }
 
-  // Win = all Hebrew letters (normalized) guessed
   const hebrewChars = new Set(state.word.split('').filter(isHebrew).map(normalizeLetter));
   const allGuessed  = [...hebrewChars].every(c => state.guessed.has(c));
   const dead        = state.wrongCount >= MAX_WRONG;
 
   renderAll();
 
-  if (allGuessed)   setTimeout(() => showResult(true),  350);
-  else if (dead)    setTimeout(() => showResult(false), 500);
+  if (allGuessed)   setTimeout(() => showWordResult(true),  350);
+  else if (dead)    setTimeout(() => showWordResult(false), 500);
 };
 
-function showResult(won) {
-  stopTimer();
-  if (won) {
-    const earned = state.roundScore + timeLeft * 2;
-    state.score += earned;
-    document.getElementById('result-score').textContent = `+${earned} נקודות ⏱${timeLeft}s נותרו | סה"כ: ${state.score}`;
-  } else {
-    document.getElementById('result-score').textContent = `ניקוד: ${state.score}`;
-  }
-  document.getElementById('result-title').textContent = won ? '🎉 כל הכבוד!' : '💔 אוי לא...';
-  document.getElementById('result-word').textContent  = `המילה הייתה: ${state.word}`;
-  document.getElementById('result').classList.add('show');
-  if (won) trySaveScore(state.score);
-}
-
-window.startNewRound = startNewRound;
-startNewRound();
+// ── Boot ──────────────────────────────────────────────────────────
+document.getElementById('result-btn').addEventListener('click', startSession);
+startSession();
 </script>
 </body>
 </html>
