@@ -303,6 +303,7 @@
   }
 
   async function triggerGameOver() {
+    if (gamePhase === 'GAMEOVER') return; // idempotency guard
     gamePhase = 'GAMEOVER';
     document.getElementById('ov-score').textContent = `ניקוד: ${score}`;
     document.getElementById('overlay').classList.add('show');
@@ -320,11 +321,13 @@
     lastTime     = 0;
     selected     = null;
     gamePhase    = 'IDLE';
-    score        = 0;
-    timeLeft     = GAME_DURATION;
-    scorePopups  = [];
-    cascadeLevel = 0;
-    swapAnim     = null;
+    score          = 0;
+    timeLeft       = GAME_DURATION;
+    scorePopups    = [];
+    cascadeLevel   = 0;
+    swapAnim       = null;
+    removeTimer    = 0;
+    pendingMatches = new Set();
     document.getElementById('score-val').textContent  = '0';
     document.getElementById('timer-val').textContent  = GAME_DURATION;
     document.getElementById('timer-val').style.color  = '#ff8c42';
@@ -414,23 +417,20 @@
 
     // Column by column: shift non-null tiles to bottom, fill top with new tiles
     for (let c = 0; c < COLS; c++) {
-      // Collect existing tiles bottom-up
-      const existing = [];
+      // Collect existing tiles bottom-up with their original row positions
+      // Snapshot positions BEFORE mutating the board to avoid stale scans
+      const existing = []; // { tile, oldRow }
       for (let r = ROWS - 1; r >= 0; r--) {
-        if (board[r][c] !== null) existing.push(board[r][c]);
+        if (board[r][c] !== null) existing.push({ tile: board[r][c], oldRow: r });
       }
       // Fill column bottom-up: existing first, then new tiles above
       for (let r = ROWS - 1; r >= 0; r--) {
         const idx = ROWS - 1 - r; // 0 = bottom row
         if (idx < existing.length) {
-          const tile = existing[idx];
-          // Find where tile currently sits to compute drop distance
-          let oldRow = r;
-          for (let rr = 0; rr < ROWS; rr++) {
-            if (board[rr][c] === tile) { oldRow = rr; break; }
-          }
-          const dropPx = (r - oldRow) * TILE_SIZE;
-          tile.y = -dropPx; // negative = above destination; will animate toward 0
+          const { tile, oldRow } = existing[idx];
+          const dropPx = (r - oldRow) * TILE_SIZE; // pixels tile must fall
+          tile.y    = -dropPx; // negative = above destination; animates toward 0
+          tile.alpha = 1;
           board[r][c] = tile;
         } else {
           // New tile spawning from above the board
