@@ -38,6 +38,14 @@
       margin-bottom: 10px;
       font-weight: 700;
     }
+    #timer-area {
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      font-weight: 700;
+      color: #ffb88c;
+      transition: color 0.3s;
+    }
+    .timer-urgent { color: #ff4444 !important; }
 
     /* Gallows SVG — centered, no side panel */
     #hangman-svg {
@@ -232,6 +240,7 @@
 
 <h1>🎭 דיש תלוי</h1>
 <div id="score-area">ניקוד: <span id="scoreDisplay">0</span></div>
+<div id="timer-area">⏱ <span id="timerDisplay">60</span></div>
 
 <!-- Gallows SVG: Dishi's photo IS the head -->
 <svg id="hangman-svg" viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg">
@@ -335,10 +344,18 @@ const WORDS = [
 
 const PARTS = ['part-head','part-body','part-arm-l','part-arm-r','part-leg-l','part-leg-r'];
 const MAX_WRONG = 6;
-const ALEPH_BET = 'אבגדהוזחטיכלמנסעפצקרשת';
+const ALEPH_BET     = 'אבגדהוזחטיכלמנסעפצקרשת';
+const FINALS        = 'םךןץף';
+const FINAL_TO_BASE = { 'ם':'מ', 'ך':'כ', 'ן':'נ', 'ץ':'צ', 'ף':'פ' };
+const ROUND_TIME    = 60;
+
+function normalizeLetter(ch) { return FINAL_TO_BASE[ch] || ch; }
+function normalizeWord(w) { return w.split('').map(normalizeLetter).join(''); }
 
 let state = { word:'', hint:'', guessed:new Set(), wrongCount:0, score:0, roundScore:0 };
 let usedWords = new Set();
+let timerInterval = null;
+let timeLeft      = ROUND_TIME;
 
 function pickWord() {
   if (usedWords.size >= WORDS.length) usedWords.clear();
@@ -346,6 +363,33 @@ function pickWord() {
   do { w = WORDS[Math.floor(Math.random() * WORDS.length)]; } while (usedWords.has(w.word));
   usedWords.add(w.word);
   return w;
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = ROUND_TIME;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      setTimeout(() => showResult(false), 100);
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function updateTimerDisplay() {
+  document.getElementById('timerDisplay').textContent = timeLeft;
+  const area = document.getElementById('timer-area');
+  if (timeLeft <= 10) area.classList.add('timer-urgent');
+  else                area.classList.remove('timer-urgent');
 }
 
 function startNewRound() {
@@ -357,6 +401,7 @@ function startNewRound() {
   state.hint = hint;
   document.getElementById('result').classList.remove('show');
   PARTS.forEach(id => document.getElementById(id).classList.remove('on'));
+  startTimer();
   renderAll();
 }
 
@@ -378,7 +423,7 @@ function renderWord() {
 
   display.innerHTML = state.word.split('').map((ch, i) => {
     const isHebrewChar = isHebrew(ch);
-    const revealed = !isHebrewChar || state.guessed.has(ch);
+    const revealed = !isHebrewChar || state.guessed.has(normalizeLetter(ch));
     const isNew    = revealed && isHebrewChar && !oldRevealedIdx.has(i);
     const spaceClass = (!isHebrewChar && ch !== '\u05f4') ? ' space' : '';
     return `<div class="letter-box${spaceClass}${isNew ? ' pop' : ''}">${revealed ? ch : ''}</div>`;
@@ -392,22 +437,32 @@ function renderLives() {
 }
 
 function renderWrongLetters() {
-  const wrongs = [...state.guessed].filter(ch => !state.word.includes(ch));
+  const normWord = normalizeWord(state.word);
+  const wrongs   = [...state.guessed].filter(ch => !normWord.includes(ch));
   document.getElementById('wrong-letters').textContent =
     wrongs.length ? `שגיאות: ${wrongs.join(' ')}` : '';
 }
 
 function renderKeyboard() {
-  const kb = document.getElementById('keyboard');
-  kb.innerHTML = ALEPH_BET.split('').map(ch => {
-    const guessed = state.guessed.has(ch);
-    const isWrong = guessed && !state.word.includes(ch);
-    const isRight = guessed && state.word.includes(ch);
+  const kb      = document.getElementById('keyboard');
+  const normWord = normalizeWord(state.word);
+
+  function keyHTML(ch) {
+    const norm    = normalizeLetter(ch);
+    const isGuessed = state.guessed.has(norm);
+    const inWord  = normWord.includes(norm);
+    const isWrong = isGuessed && !inWord;
+    const isRight = isGuessed && inWord;
     let cls = 'key-btn';
     if (isWrong) cls += ' wrong';
     if (isRight) cls += ' correct';
-    return `<button class="${cls}" ${guessed ? 'disabled' : ''} onclick="guess('${ch}')">${ch}</button>`;
-  }).join('');
+    return `<button class="${cls}" ${isGuessed ? 'disabled' : ''} onclick="guess('${ch}')">${ch}</button>`;
+  }
+
+  kb.innerHTML =
+    ALEPH_BET.split('').map(keyHTML).join('') +
+    '<div style="width:100%;height:4px"></div>' +
+    FINALS.split('').map(keyHTML).join('');
 }
 
 function showGallows() {
@@ -415,10 +470,12 @@ function showGallows() {
 }
 
 window.guess = (ch) => {
-  if (state.guessed.has(ch)) return;
-  state.guessed.add(ch);
+  const norm = normalizeLetter(ch);
+  if (state.guessed.has(norm)) return;
+  state.guessed.add(norm);
 
-  if (!state.word.includes(ch)) {
+  const normWord = normalizeWord(state.word);
+  if (!normWord.includes(norm)) {
     state.wrongCount++;
     state.roundScore = Math.max(0, state.roundScore - 15);
     showGallows();
@@ -428,8 +485,8 @@ window.guess = (ch) => {
     svg.classList.add('shake');
   }
 
-  // Win = all Hebrew letters guessed; non-Hebrew chars are auto-revealed
-  const hebrewChars = new Set(state.word.split('').filter(isHebrew));
+  // Win = all Hebrew letters (normalized) guessed
+  const hebrewChars = new Set(state.word.split('').filter(isHebrew).map(normalizeLetter));
   const allGuessed  = [...hebrewChars].every(c => state.guessed.has(c));
   const dead        = state.wrongCount >= MAX_WRONG;
 
@@ -440,9 +497,16 @@ window.guess = (ch) => {
 };
 
 function showResult(won) {
+  stopTimer();
+  if (won) {
+    const earned = state.roundScore + timeLeft * 2;
+    state.score += earned;
+    document.getElementById('result-score').textContent = `+${earned} נקודות ⏱${timeLeft}s נותרו | סה"כ: ${state.score}`;
+  } else {
+    document.getElementById('result-score').textContent = `ניקוד: ${state.score}`;
+  }
   document.getElementById('result-title').textContent = won ? '🎉 כל הכבוד!' : '💔 אוי לא...';
   document.getElementById('result-word').textContent  = `המילה הייתה: ${state.word}`;
-  document.getElementById('result-score').textContent = `ניקוד: ${state.score}`;
   document.getElementById('result').classList.add('show');
   if (won) trySaveScore(state.score);
 }
