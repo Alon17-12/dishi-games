@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>קאנדי דישי 🍬</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: linear-gradient(150deg, #0d0820 0%, #1a0d2e 45%, #2a1240 100%);
+      color: #f0e0d0;
+      font-family: 'Nunito', sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh;
+      padding: 12px 8px 24px;
+      user-select: none; overflow-x: hidden;
+    }
+    h1 {
+      font-family: 'Fredoka One', cursive; font-size: 1.8rem;
+      background: linear-gradient(135deg, #ff6b35, #ff9a5c, #ffd700);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 4px; text-align: center;
+    }
+    #hud {
+      display: flex; gap: 24px; margin-bottom: 10px;
+      font-family: 'Fredoka One', cursive;
+    }
+    .hud-box {
+      text-align: center;
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 12px; padding: 6px 18px;
+    }
+    .hud-label { font-size: 0.65rem; color: rgba(240,224,208,0.55); text-transform: uppercase; letter-spacing: 1px; }
+    .hud-val   { font-size: 1.6rem; color: #ffd700; line-height: 1.1; }
+    #timer-val { color: #ff8c42; }
+    #gameCanvas {
+      display: block;
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(192,132,252,0.25), 0 0 0 2px rgba(255,255,255,0.08);
+      cursor: pointer;
+      touch-action: none;
+    }
+    /* Overlay for game-over */
+    #overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(5,2,18,0.93);
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; z-index: 100; padding: 32px 24px;
+    }
+    #overlay.show { display: flex; }
+    #ov-title  { font-family:'Fredoka One',cursive; font-size:2.8rem; text-align:center; }
+    #ov-score  { font-family:'Fredoka One',cursive; font-size:2rem; color:#ffd700; }
+    .btn {
+      background: linear-gradient(135deg, #ff6b35, #ff9a5c);
+      color: white; border: none; padding: 13px 36px;
+      border-radius: 50px; cursor: pointer;
+      font-family: 'Fredoka One', cursive; font-size: 1.2rem;
+      box-shadow: 0 4px 20px rgba(255,107,53,0.45);
+      transition: transform 0.18s;
+    }
+    .btn:hover { transform: scale(1.06); }
+  </style>
+</head>
+<body>
+  <h1>🍬 קאנדי דישי</h1>
+  <div id="hud">
+    <div class="hud-box">
+      <div class="hud-label">ניקוד</div>
+      <div class="hud-val" id="score-val">0</div>
+    </div>
+    <div class="hud-box">
+      <div class="hud-label">זמן</div>
+      <div class="hud-val" id="timer-val">60</div>
+    </div>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="overlay">
+    <div id="ov-title">⏰ נגמר הזמן!</div>
+    <div id="ov-score"></div>
+    <button class="btn" onclick="restartGame()">🔄 שחק שוב</button>
+  </div>
+
+  <script type="module">
+  // ─── Constants ────────────────────────────────────────────────────────────
+  const ROWS = 8, COLS = 8;
+  const GAME_DURATION = 60; // seconds
+
+  const TILES = [
+    { emoji: '🧴', color: '#4ecdc455', label: 'סבון'          },
+    { emoji: '🧻', color: '#f7dc6f55', label: 'נייר טואלט'    },
+    { emoji: '💩', color: '#8b451355', label: 'קקי סטיק'      },
+    { emoji: '🪣', color: '#85c1e955', label: 'מגב'           },
+    { emoji: '🍽️', color: '#e8daef55', label: 'כלים מלוכלכים' },
+  ];
+
+  // ─── Canvas setup ─────────────────────────────────────────────────────────
+  const canvas = document.getElementById('gameCanvas');
+  const ctx    = canvas.getContext('2d');
+
+  let TILE_SIZE, BOARD_PX;
+  function resizeCanvas() {
+    const maxW  = Math.min(window.innerWidth - 16, 400);
+    TILE_SIZE   = Math.floor(maxW / COLS);
+    BOARD_PX    = TILE_SIZE * COLS;
+    canvas.width  = BOARD_PX;
+    canvas.height = BOARD_PX;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', () => { resizeCanvas(); });
+
+  // ─── Game loop placeholder ─────────────────────────────────────────────────
+  let lastTime = 0;
+  function gameLoop(ts) {
+    const dt = Math.min((ts - lastTime) / 1000, 0.05); // cap at 50ms
+    lastTime = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(gameLoop);
+  }
+  function update(dt) { /* filled in later tasks */ }
+  function render()   {
+    ctx.clearRect(0, 0, BOARD_PX, BOARD_PX);
+    // placeholder grid
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        ctx.fillStyle = (r + c) % 2 === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)';
+        ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE - 1, TILE_SIZE - 1);
+      }
+    }
+  }
+  window.restartGame = () => {};
+  requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
