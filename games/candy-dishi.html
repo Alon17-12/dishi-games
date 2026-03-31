@@ -99,6 +99,9 @@
   // ─── Board state ──────────────────────────────────────────────────────────
   // board[r][c] = { type, y, alpha, scale, removing }
   let board = [];
+  // ─── Input / selection ────────────────────────────────────────────────────
+  let selected = null;       // { r, c } or null
+  let gamePhase = 'IDLE';    // IDLE | SWAPPING | REMOVING | FALLING | GAMEOVER
 
   function mkTile(type) {
     return { type, y: 0, alpha: 1, scale: 1, removing: false };
@@ -196,10 +199,62 @@
         drawTile(t.type, px, py, t.alpha, t.scale);
       }
     }
+  // Selection highlight
+  if (selected && gamePhase === 'IDLE') {
+    const { r, c } = selected;
+    ctx.save();
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth   = 3;
+    ctx.globalAlpha = 0.9 + 0.1 * Math.sin(Date.now() / 200); // pulse
+    ctx.beginPath();
+    ctx.roundRect(c * TILE_SIZE + 2, r * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4, 10);
+    ctx.stroke();
+    ctx.restore();
+  }
   }
 
-  function restartGame() { lastTime = 0; initBoard(); render(); }
+  function restartGame() { lastTime = 0; selected = null; gamePhase = 'IDLE'; initBoard(); render(); }
   document.getElementById('restart-btn').addEventListener('click', restartGame);
+  function attemptSwap(r1, c1, r2, c2) {
+    // Implemented in Task 4
+    console.log('swap', r1, c1, '→', r2, c2);
+  }
+
+  function getCellFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    return {
+      r: Math.floor(y / TILE_SIZE),
+      c: Math.floor(x / TILE_SIZE),
+    };
+  }
+
+  function handleTap(e) {
+    e.preventDefault();
+    if (gamePhase !== 'IDLE') return;
+    const { r, c } = getCellFromEvent(e);
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+
+    if (!selected) {
+      selected = { r, c };
+      return;
+    }
+    const dr = Math.abs(r - selected.r);
+    const dc = Math.abs(c - selected.c);
+    if (dr + dc === 1) {
+      attemptSwap(selected.r, selected.c, r, c);
+      selected = null;
+    } else {
+      selected = { r, c };
+    }
+  }
+
+  canvas.addEventListener('click',      handleTap);
+  canvas.addEventListener('touchstart', handleTap, { passive: false });
+
   initBoard();
   requestAnimationFrame(gameLoop);
   </script>
