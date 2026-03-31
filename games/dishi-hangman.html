@@ -35,30 +35,17 @@
     #score-area {
       color: #ffb88c;
       font-size: 0.9rem;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
       font-weight: 700;
     }
 
-    /* Game panels: gallows + dishi photo */
-    #game-area {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 12px;
-      width: 100%;
-      max-width: 380px;
-    }
-
-    /* SVG gallows */
-    #gallows-wrap {
-      flex: 0 0 auto;
-    }
-
+    /* Gallows SVG — centered, no side panel */
     #hangman-svg {
-      width: 140px;
-      height: 160px;
-      filter: drop-shadow(0 0 8px rgba(255,107,53,0.3));
+      display: block;
+      margin: 0 auto 10px;
+      width: 180px;
+      height: 210px;
+      filter: drop-shadow(0 0 10px rgba(255,107,53,0.3));
     }
 
     .g-base {
@@ -68,69 +55,25 @@
       fill: none;
     }
 
+    /* Body-part group: hidden until wrong guess */
     .g-part {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .g-part.on { opacity: 1; }
+
+    /* Lines inside body-part groups */
+    .g-line {
       stroke: #ff6b35;
       stroke-width: 3;
       stroke-linecap: round;
       fill: none;
-      opacity: 0;
-      transition: opacity 0.25s ease;
     }
-
-    .g-part.on { opacity: 1; }
-
-    #part-head {
-      stroke: #ffaa66;
-      stroke-width: 2.5;
-      fill: rgba(255,140,80,0.08);
-    }
-
-    /* Dishi photo */
-    #dishi-wrap {
-      flex: 0 0 auto;
-      position: relative;
-      width: 110px;
-      height: 130px;
-      border-radius: 18px;
-      overflow: hidden;
-      border: 2px solid rgba(255,140,66,0.35);
-      box-shadow: 0 0 24px rgba(255,107,53,0.18);
-    }
-
-    #dishi-img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    #dishi-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(150deg, #0d0820, #1a0d2e);
-      transition: opacity 0.55s ease;
-    }
-
-    #dishi-label {
-      position: absolute;
-      bottom: 0;
-      left: 0; right: 0;
-      background: rgba(0,0,0,0.55);
-      color: #ffcc88;
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-align: center;
-      padding: 3px 0;
-      opacity: 0;
-      transition: opacity 0.4s;
-    }
-
-    #dishi-wrap.revealed #dishi-label { opacity: 1; }
 
     /* Lives */
     #lives {
       font-size: 1.1rem;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
       letter-spacing: 3px;
       text-align: center;
       min-height: 28px;
@@ -138,7 +81,7 @@
 
     /* Wrong letters */
     #wrong-letters {
-      color: rgba(220,80,60,0.7);
+      color: rgba(220,80,60,0.75);
       font-size: 0.8rem;
       margin-bottom: 8px;
       min-height: 18px;
@@ -147,13 +90,15 @@
       font-weight: 700;
     }
 
-    /* Word display – RTL so Hebrew reads naturally */
+    /* Word display
+       dir="rtl" on html → flex-direction: row already lays items right→left.
+       row-reverse would flip to left→right (bug!), so we just use row. */
     #word-display {
       display: flex;
-      flex-direction: row-reverse;
-      gap: 6px;
+      flex-direction: row;   /* RTL doc: row = right to left */
       flex-wrap: wrap;
       justify-content: center;
+      gap: 5px;
       margin-bottom: 8px;
       min-height: 50px;
       max-width: 360px;
@@ -168,6 +113,12 @@
       font-weight: 900;
       color: #fff5e0;
       line-height: 42px;
+    }
+
+    /* Space box — thinner, no underline */
+    .letter-box.space {
+      width: 16px;
+      border-bottom: none;
     }
 
     .letter-box.pop {
@@ -222,15 +173,11 @@
       border-color: rgba(255,140,66,0.65);
       transform: scale(1.12);
     }
-
     .key-btn:active:not(:disabled) { transform: scale(0.9); }
-
     .key-btn:disabled { opacity: 0.18; cursor: default; transform: none !important; }
-
     .key-btn.wrong   { background: rgba(200,50,30,0.28); border-color: rgba(220,80,60,0.45); color: rgba(255,140,120,0.55); }
     .key-btn.correct { background: rgba(60,200,80,0.18); border-color: rgba(80,220,100,0.45); color: rgba(140,255,150,0.85); }
 
-    /* Shake on wrong */
     @keyframes shake {
       0%,100% { transform: translateX(0); }
       20% { transform: translateX(-7px); }
@@ -243,58 +190,38 @@
     /* Result */
     #result {
       display: none;
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background: rgba(5,2,18,0.93);
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 18px;
-      z-index: 100;
-      padding: 32px 24px;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 18px; z-index: 100; padding: 32px 24px;
     }
     #result.show { display: flex; }
 
     #result-title {
       font-family: 'Fredoka One', cursive;
-      font-size: 3rem;
-      text-align: center;
-      line-height: 1.1;
+      font-size: 3rem; text-align: center; line-height: 1.1;
     }
 
     #result-reveal {
-      width: 130px;
-      height: 130px;
-      border-radius: 50%;
+      width: 130px; height: 130px; border-radius: 50%;
       overflow: hidden;
       border: 3px solid rgba(255,180,80,0.6);
       box-shadow: 0 0 32px rgba(255,140,53,0.35);
     }
-
     #result-reveal img { width: 100%; height: 100%; object-fit: cover; }
 
-    #result-word {
-      color: #ffb88c;
-      font-size: 1rem;
-      text-align: center;
-    }
-
+    #result-word  { color: #ffb88c; font-size: 1rem; text-align: center; }
     #result-score {
       font-family: 'Fredoka One', cursive;
-      font-size: 2rem;
-      color: #ffd700;
+      font-size: 2rem; color: #ffd700;
       text-shadow: 0 0 16px rgba(255,215,0,0.4);
     }
 
     .btn {
       background: linear-gradient(135deg, #ff6b35, #ff9a5c);
-      color: white;
-      border: none;
-      padding: 13px 36px;
-      border-radius: 50px;
-      cursor: pointer;
-      font-family: 'Fredoka One', cursive;
-      font-size: 1.2rem;
+      color: white; border: none; padding: 13px 36px;
+      border-radius: 50px; cursor: pointer;
+      font-family: 'Fredoka One', cursive; font-size: 1.2rem;
       box-shadow: 0 4px 20px rgba(255,107,53,0.45);
       transition: transform 0.18s, box-shadow 0.18s;
     }
@@ -306,32 +233,55 @@
 <h1>🎭 דיש תלוי</h1>
 <div id="score-area">ניקוד: <span id="scoreDisplay">0</span></div>
 
-<div id="game-area">
-  <!-- Classic hangman SVG -->
-  <div id="gallows-wrap">
-    <svg id="hangman-svg" viewBox="0 0 100 125" xmlns="http://www.w3.org/2000/svg">
-      <!-- Gallows: always visible -->
-      <line class="g-base" x1="10" y1="118" x2="90" y2="118"/>
-      <line class="g-base" x1="28" y1="118" x2="28" y2="6"/>
-      <line class="g-base" x1="28" y1="6"   x2="66" y2="6"/>
-      <line class="g-base" x1="66" y1="6"   x2="66" y2="21"/>
-      <!-- Body parts: shown on wrong guesses -->
-      <circle id="part-head"      class="g-part" cx="66" cy="30" r="9"/>
-      <line   id="part-body"      class="g-part" x1="66" y1="39" x2="66" y2="72"/>
-      <line   id="part-arm-l"     class="g-part" x1="66" y1="48" x2="50" y2="61"/>
-      <line   id="part-arm-r"     class="g-part" x1="66" y1="48" x2="82" y2="61"/>
-      <line   id="part-leg-l"     class="g-part" x1="66" y1="72" x2="52" y2="90"/>
-      <line   id="part-leg-r"     class="g-part" x1="66" y1="72" x2="80" y2="90"/>
-    </svg>
-  </div>
+<!-- Gallows SVG: Dishi's photo IS the head -->
+<svg id="hangman-svg" viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Clip Dishi's photo to the head circle -->
+    <clipPath id="head-clip">
+      <circle cx="76" cy="37" r="13"/>
+    </clipPath>
+  </defs>
 
-  <!-- Dishi photo: reveals as you guess correctly -->
-  <div id="dishi-wrap">
-    <img id="dishi-img" src="../assets/dishi.png" alt="דישי">
-    <div id="dishi-overlay"></div>
-    <div id="dishi-label">דישי! 🎉</div>
-  </div>
-</div>
+  <!-- Gallows — always visible -->
+  <line class="g-base" x1="10"  y1="144" x2="95"  y2="144"/>
+  <line class="g-base" x1="26"  y1="144" x2="26"  y2="6"/>
+  <line class="g-base" x1="26"  y1="6"   x2="76"  y2="6"/>
+  <line class="g-base" x1="76"  y1="6"   x2="76"  y2="22"/>
+
+  <!-- Wrong guess 1: Dishi's head (photo clipped to circle) -->
+  <g id="part-head" class="g-part">
+    <image href="../assets/dishi.png"
+           x="63" y="24" width="26" height="26"
+           clip-path="url(#head-clip)"
+           preserveAspectRatio="xMidYMid slice"/>
+    <circle cx="76" cy="37" r="13" fill="none" stroke="#ffaa66" stroke-width="2"/>
+  </g>
+
+  <!-- Wrong guess 2: body -->
+  <g id="part-body" class="g-part">
+    <line class="g-line" x1="76" y1="50" x2="76" y2="88"/>
+  </g>
+
+  <!-- Wrong guess 3: left arm -->
+  <g id="part-arm-l" class="g-part">
+    <line class="g-line" x1="76" y1="60" x2="56" y2="76"/>
+  </g>
+
+  <!-- Wrong guess 4: right arm -->
+  <g id="part-arm-r" class="g-part">
+    <line class="g-line" x1="76" y1="60" x2="96" y2="76"/>
+  </g>
+
+  <!-- Wrong guess 5: left leg -->
+  <g id="part-leg-l" class="g-part">
+    <line class="g-line" x1="76" y1="88" x2="60" y2="112"/>
+  </g>
+
+  <!-- Wrong guess 6: right leg -->
+  <g id="part-leg-r" class="g-part">
+    <line class="g-line" x1="76" y1="88" x2="92" y2="112"/>
+  </g>
+</svg>
 
 <div id="lives"></div>
 <div id="wrong-letters"></div>
@@ -339,7 +289,6 @@
 <div id="hint-text"></div>
 <div id="keyboard"></div>
 
-<!-- Result overlay -->
 <div id="result">
   <div id="result-title"></div>
   <div id="result-reveal"><img src="../assets/dishi.png" alt="דישי"></div>
@@ -361,23 +310,27 @@ async function trySaveScore(score) {
   }
 }
 
+// Hebrew unicode range
+const isHebrew = ch => /[\u05D0-\u05EA]/.test(ch);
+
 const WORDS = [
-  { word: 'דישי',       hint: 'הגיבור של כולנו 👑' },
-  { word: 'רספיה',      hint: 'המאכל שדישי הוא מלכו' },
-  { word: 'תדר',        hint: '"אתה יורד לי מה..."' },
-  { word: 'צפון',       hint: '"הכיוון שנגד הים"' },
-  { word: 'שריפות',     hint: '"אני מכבה..."' },
-  { word: 'סיגריה',     hint: '"...ונמשיך"' },
-  { word: 'כבאי',       hint: 'מה שדישי הוא בלב' },
-  { word: 'מותג',       hint: 'דישי הוא... חי' },
-  { word: 'כריזמה',     hint: 'יש לו יותר מדי מזה' },
-  { word: 'מסיבה',      hint: 'מה שקורה היום 🎊' },
-  { word: 'הפתעה',      hint: 'מה שעשינו לדישי' },
-  { word: 'יומהולדת',   hint: 'ה... של דישי 🎂' },
-  { word: 'חברים',      hint: 'מה שיש לדישי המון' },
-  { word: 'אגדה',       hint: 'מה שדישי הוא' },
-  { word: 'מלך',        hint: 'תואר שמגיע לו' },
-  { word: 'ניצחון',     hint: 'הסוף של כל סיפור של דישי' },
+  { word: 'נייר טואלט',      hint: 'מוצר הכי חשוב בצבא' },
+  { word: 'מכולה',           hint: 'מה שדישי הוא לפעמים' },
+  { word: 'דישי',            hint: 'הגיבור שלנו 👑' },
+  { word: 'גור',             hint: 'כינוי חיבה' },
+  { word: 'משה',             hint: 'שם קלאסי' },
+  { word: 'מסופחים',         hint: 'חיילים שהושאלו לחיל אחר' },
+  { word: 'תורנים',          hint: 'מי שתורו לעשות כל מיני דברים' },
+  { word: 'טפ\u05f4ש מטבח',  hint: 'תפקיד לא מכובד במיוחד' },
+  { word: 'רוני',            hint: 'שם שמופיע בסיפורים' },
+  { word: 'תדר',             hint: '"אתה יורד לי מה..."' },
+  { word: 'בלאי',            hint: 'ציוד שנשחק' },
+  { word: 'רספיה',           hint: 'המאכל שדישי הוא מלכו' },
+  { word: 'גזרות',           hint: 'דברים שאין ברירה לעשות' },
+  { word: 'דנה',             hint: 'שם נשי' },
+  { word: 'מגבים',           hint: 'כלי ניקיון נפוץ' },
+  { word: 'קקי סטיק',        hint: 'כלי ספציפי מאוד לניקיון...' },
+  { word: 'תקלות בינוי',     hint: 'בעיות שקורות בשיפוצים' },
 ];
 
 const PARTS = ['part-head','part-body','part-arm-l','part-arm-r','part-leg-l','part-leg-r'];
@@ -399,7 +352,7 @@ function startNewRound() {
   const { word, hint } = pickWord();
   state.guessed    = new Set();
   state.wrongCount = 0;
-  state.roundScore = word.length * 15;
+  state.roundScore = word.split('').filter(isHebrew).length * 15;
   state.word = word;
   state.hint = hint;
   document.getElementById('result').classList.remove('show');
@@ -411,21 +364,24 @@ function renderAll() {
   renderWord();
   renderLives();
   renderKeyboard();
-  renderOverlay();
   renderWrongLetters();
   document.getElementById('hint-text').textContent = `💡 רמז: ${state.hint}`;
   document.getElementById('scoreDisplay').textContent = state.score;
 }
 
 function renderWord() {
-  const display = document.getElementById('word-display');
-  const prev = display.querySelectorAll('.letter-box');
-  const oldRevealed = new Set([...prev].map((el, i) => el.textContent ? i : null).filter(x => x !== null));
+  const display  = document.getElementById('word-display');
+  const prevBoxes = display.querySelectorAll('.letter-box');
+  const oldRevealedIdx = new Set(
+    [...prevBoxes].map((el, i) => (el.textContent.trim() ? i : null)).filter(x => x !== null)
+  );
 
   display.innerHTML = state.word.split('').map((ch, i) => {
-    const revealed = state.guessed.has(ch) || ch === ' ';
-    const isNew    = revealed && !oldRevealed.has(i);
-    return `<div class="letter-box${isNew ? ' pop' : ''}">${revealed ? ch : ''}</div>`;
+    const isHebrewChar = isHebrew(ch);
+    const revealed = !isHebrewChar || state.guessed.has(ch);
+    const isNew    = revealed && isHebrewChar && !oldRevealedIdx.has(i);
+    const spaceClass = (!isHebrewChar && ch !== '\u05f4') ? ' space' : '';
+    return `<div class="letter-box${spaceClass}${isNew ? ' pop' : ''}">${revealed ? ch : ''}</div>`;
   }).join('');
 }
 
@@ -444,23 +400,14 @@ function renderWrongLetters() {
 function renderKeyboard() {
   const kb = document.getElementById('keyboard');
   kb.innerHTML = ALEPH_BET.split('').map(ch => {
-    const guessed  = state.guessed.has(ch);
-    const isWrong  = guessed && !state.word.includes(ch);
-    const isRight  = guessed && state.word.includes(ch);
+    const guessed = state.guessed.has(ch);
+    const isWrong = guessed && !state.word.includes(ch);
+    const isRight = guessed && state.word.includes(ch);
     let cls = 'key-btn';
     if (isWrong) cls += ' wrong';
     if (isRight) cls += ' correct';
     return `<button class="${cls}" ${guessed ? 'disabled' : ''} onclick="guess('${ch}')">${ch}</button>`;
   }).join('');
-}
-
-function renderOverlay() {
-  const wordChars = new Set(state.word.replace(/ /g,'').split(''));
-  const correct   = [...wordChars].filter(c => state.guessed.has(c)).length;
-  const ratio     = correct / wordChars.size;
-  document.getElementById('dishi-overlay').style.opacity = 1 - ratio;
-  if (ratio > 0.5) document.getElementById('dishi-wrap').classList.add('revealed');
-  else             document.getElementById('dishi-wrap').classList.remove('revealed');
 }
 
 function showGallows() {
@@ -481,9 +428,10 @@ window.guess = (ch) => {
     svg.classList.add('shake');
   }
 
-  const wordChars  = new Set(state.word.replace(/ /g,'').split(''));
-  const allGuessed = [...wordChars].every(c => state.guessed.has(c));
-  const dead       = state.wrongCount >= MAX_WRONG;
+  // Win = all Hebrew letters guessed; non-Hebrew chars are auto-revealed
+  const hebrewChars = new Set(state.word.split('').filter(isHebrew));
+  const allGuessed  = [...hebrewChars].every(c => state.guessed.has(c));
+  const dead        = state.wrongCount >= MAX_WRONG;
 
   renderAll();
 
