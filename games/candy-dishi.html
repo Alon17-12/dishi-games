@@ -108,6 +108,7 @@
   let pendingMatches = new Set();
   let cascadeLevel   = 0;
   let swapAnim       = null; // { r1,c1,r2,c2,progress } — progress 0→1
+  let timeLeft    = GAME_DURATION;
   let score       = 0;
   let scorePopups = []; // { x, y, text, alpha, vy } — floating +N labels
   let removeTimer = 0;
@@ -159,6 +160,15 @@
     requestAnimationFrame(gameLoop);
   }
   function update(dt) {
+    // Timer (runs in every phase except GAMEOVER)
+    if (gamePhase !== 'GAMEOVER') {
+      timeLeft -= dt;
+      const display = Math.max(0, Math.ceil(timeLeft));
+      document.getElementById('timer-val').textContent = display;
+      document.getElementById('timer-val').style.color = display <= 10 ? '#ff4444' : '#ff8c42';
+      if (timeLeft <= 0 && gamePhase === 'IDLE') triggerGameOver();
+    }
+
     // Score popups animate in every phase (not just REMOVING)
     scorePopups.forEach(p => { p.offsetY += p.vy * dt; p.alpha -= dt * 2; });
     scorePopups = scorePopups.filter(p => p.alpha > 0);
@@ -189,8 +199,19 @@
         }
         startFalling();
       }
+    } else if (gamePhase === 'FALLING') {
+      let stillFalling = false;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const t = board[r][c];
+          if (!t || t.y === 0) continue;
+          stillFalling = true;
+          t.y = Math.min(0, t.y + FALL_SPEED * dt);
+        }
+      }
+      if (!stillFalling) checkCascade();
     }
-    // Other phases filled in Tasks 6-7
+    // Other phases filled in Task 7
   }
 
   function drawTile(type, px, py, alpha, scale) {
@@ -281,7 +302,35 @@
     }
   }
 
-  function restartGame() { lastTime = 0; selected = null; gamePhase = 'IDLE'; score = 0; scorePopups = []; cascadeLevel = 0; document.getElementById('score-val').textContent = 0; initBoard(); render(); }
+  async function triggerGameOver() {
+    gamePhase = 'GAMEOVER';
+    document.getElementById('ov-score').textContent = `ניקוד: ${score}`;
+    document.getElementById('overlay').classList.add('show');
+    try {
+      const [{ saveScore }, { auth }] = await Promise.all([
+        import('../leaderboard.js'),
+        import('../firebase-config.js'),
+      ]);
+      await saveScore('candy-dishi', auth.currentUser, score);
+    } catch (e) { console.warn('Score not saved:', e); }
+  }
+
+  function restartGame() {
+    document.getElementById('overlay').classList.remove('show');
+    lastTime     = 0;
+    selected     = null;
+    gamePhase    = 'IDLE';
+    score        = 0;
+    timeLeft     = GAME_DURATION;
+    scorePopups  = [];
+    cascadeLevel = 0;
+    swapAnim     = null;
+    document.getElementById('score-val').textContent  = '0';
+    document.getElementById('timer-val').textContent  = GAME_DURATION;
+    document.getElementById('timer-val').style.color  = '#ff8c42';
+    initBoard();
+    render();
+  }
   document.getElementById('restart-btn').addEventListener('click', restartGame);
   function swapCells(r1, c1, r2, c2) {
     const tmp    = board[r1][c1];
@@ -361,8 +410,50 @@
   }
 
   function startFalling() {
-    // Implemented in Task 6; temporarily skip to IDLE so game stays playable
-    gamePhase = 'IDLE';
+    gamePhase = 'FALLING';
+
+    // Column by column: shift non-null tiles to bottom, fill top with new tiles
+    for (let c = 0; c < COLS; c++) {
+      // Collect existing tiles bottom-up
+      const existing = [];
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r][c] !== null) existing.push(board[r][c]);
+      }
+      // Fill column bottom-up: existing first, then new tiles above
+      for (let r = ROWS - 1; r >= 0; r--) {
+        const idx = ROWS - 1 - r; // 0 = bottom row
+        if (idx < existing.length) {
+          const tile = existing[idx];
+          // Find where tile currently sits to compute drop distance
+          let oldRow = r;
+          for (let rr = 0; rr < ROWS; rr++) {
+            if (board[rr][c] === tile) { oldRow = rr; break; }
+          }
+          const dropPx = (r - oldRow) * TILE_SIZE;
+          tile.y = -dropPx; // negative = above destination; will animate toward 0
+          board[r][c] = tile;
+        } else {
+          // New tile spawning from above the board
+          const newTile  = mkTile(Math.floor(Math.random() * TILES.length));
+          const spawnRow = -(idx - existing.length + 1);
+          newTile.y = spawnRow * TILE_SIZE;
+          board[r][c] = newTile;
+        }
+      }
+    }
+  }
+
+  function checkCascade() {
+    const matches = findMatches();
+    if (matches.size > 0) {
+      cascadeLevel++;
+      pendingMatches = matches;
+      gamePhase      = 'REMOVING';
+      startRemoving(matches);
+    } else {
+      cascadeLevel = 0;
+      gamePhase    = 'IDLE';
+    }
   }
 
   function getCellFromEvent(e) {
