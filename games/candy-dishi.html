@@ -108,12 +108,14 @@
     board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        let type;
+        let type, attempts = 0;
         do {
           type = Math.floor(Math.random() * TILES.length);
         } while (
-          (c >= 2 && board[r][c-1].type === type && board[r][c-2].type === type) ||
-          (r >= 2 && board[r-1][c].type === type && board[r-2][c].type === type)
+          ++attempts < 100 && (
+            (c >= 2 && board[r][c-1].type === type && board[r][c-2].type === type) ||
+            (r >= 2 && board[r-1][c].type === type && board[r-2][c].type === type)
+          )
         );
         board[r][c] = mkTile(type);
       }
@@ -124,16 +126,15 @@
   const canvas = document.getElementById('gameCanvas');
   const ctx    = canvas.getContext('2d');
 
-  let TILE_SIZE, BOARD_PX;
+  let TILE_SIZE;
   function resizeCanvas() {
     const maxW  = Math.min(window.innerWidth - 16, 400);
     TILE_SIZE   = Math.floor(maxW / COLS);
-    BOARD_PX    = TILE_SIZE * COLS;
     canvas.width  = TILE_SIZE * COLS;
     canvas.height = TILE_SIZE * ROWS;
   }
   resizeCanvas();
-  window.addEventListener('resize', () => { resizeCanvas(); render(); });
+  window.addEventListener('resize', () => { resizeCanvas(); if (board.length) render(); });
 
   // ─── Game loop placeholder ─────────────────────────────────────────────────
   let lastTime = 0;
