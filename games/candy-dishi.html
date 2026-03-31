@@ -167,31 +167,31 @@
         cascadeLevel = 0;
         startRemoving(pendingMatches);
       }
-    }
-  } else if (gamePhase === 'REMOVING') {
-    removeTimer -= dt;
-    // Flash animation
-    const flashAlpha = 0.3 + 0.7 * Math.abs(Math.sin(removeTimer * 30));
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (board[r][c]?.removing) board[r][c].alpha = flashAlpha;
-      }
-    }
-    // Animate score popups
-    scorePopups.forEach(p => { p.y += p.vy * dt; p.alpha -= dt * 2; });
-    scorePopups = scorePopups.filter(p => p.alpha > 0);
-
-    if (removeTimer <= 0) {
-      // Remove tiles
+    } else if (gamePhase === 'REMOVING') {
+      removeTimer -= dt;
+      // Flash animation
+      const flashAlpha = 0.3 + 0.7 * Math.abs(Math.sin(removeTimer * 30));
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-          if (board[r][c]?.removing) board[r][c] = null;
+          if (board[r][c]?.removing) board[r][c].alpha = flashAlpha;
         }
       }
-      startFalling();
+      // Animate score popups
+      scorePopups.forEach(p => { p.y += p.vy * dt; p.alpha -= dt * 2; });
+      scorePopups = scorePopups.filter(p => p.alpha > 0);
+
+      if (removeTimer <= 0) {
+        // Remove tiles
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            if (board[r][c]?.removing) board[r][c] = null;
+          }
+        }
+        startFalling();
+      }
     }
+    // Other phases filled in Tasks 6-7
   }
-  // Other phases filled in Tasks 6-7
 
   function drawTile(type, px, py, alpha, scale) {
     if (alpha <= 0 || scale <= 0) return;
