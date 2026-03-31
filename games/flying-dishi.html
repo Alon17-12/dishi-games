@@ -69,8 +69,18 @@
 <audio id="bgMusic" loop></audio>
 
 <script type="module">
-import { saveScore } from '../leaderboard.js';
-import { auth } from '../firebase-config.js';
+// Firebase loaded lazily — game runs even if CDN is slow/unavailable
+async function trySaveScore(score) {
+  try {
+    const [{ saveScore }, { auth }] = await Promise.all([
+      import('../leaderboard.js'),
+      import('../firebase-config.js'),
+    ]);
+    await saveScore('flying-dishi', auth.currentUser, score);
+  } catch (e) {
+    console.warn('Score not saved:', e);
+  }
+}
 // ─── Responsive canvas ───────────────────────────────────────────────────────
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
@@ -1092,7 +1102,7 @@ function gameLoop() {
     if (gameState===STATE.PLAYING) drawBird(bird.x,bird.y,bird.vy,bird.flapAngle,BIRD_R);
     if (gameState===STATE.DYING) {
         deathAnim.t++;
-        if (deathAnim.t >= DEATH_DUR) { gameState=STATE.DEAD; saveScore('flying-dishi', auth.currentUser, score); }
+        if (deathAnim.t >= DEATH_DUR) { gameState=STATE.DEAD; trySaveScore(score); }
         else drawDyingBird();
     }
     updateAndDrawParticles();

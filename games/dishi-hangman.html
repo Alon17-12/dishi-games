@@ -349,8 +349,17 @@
 </div>
 
 <script type="module">
-import { saveScore } from '../leaderboard.js';
-import { auth } from '../firebase-config.js';
+async function trySaveScore(score) {
+  try {
+    const [{ saveScore }, { auth }] = await Promise.all([
+      import('../leaderboard.js'),
+      import('../firebase-config.js'),
+    ]);
+    await saveScore('dishi-hangman', auth.currentUser, score);
+  } catch (e) {
+    console.warn('Score not saved:', e);
+  }
+}
 
 const WORDS = [
   { word: 'דישי',       hint: 'הגיבור של כולנו 👑' },
@@ -487,9 +496,7 @@ function showResult(won) {
   document.getElementById('result-word').textContent  = `המילה הייתה: ${state.word}`;
   document.getElementById('result-score').textContent = `ניקוד: ${state.score}`;
   document.getElementById('result').classList.add('show');
-  if (won && auth.currentUser) {
-    saveScore('dishi-hangman', auth.currentUser, state.score);
-  }
+  if (won) trySaveScore(state.score);
 }
 
 window.startNewRound = startNewRound;
