@@ -130,7 +130,22 @@
             (r >= 2 && board[r-1][c].type === type && board[r-2][c].type === type)
           )
         );
-        board[r][c] = mkTile(type);
+        const tile  = mkTile(type);
+        tile.scale  = 0;
+        board[r][c] = tile;
+        // Staggered pop-in animation
+        const delay = (r * COLS + c) * 18;
+        setTimeout(() => {
+          let elapsed = 0;
+          const anim = (ts) => {
+            elapsed += 16;
+            const p    = Math.min(1, elapsed / 280);
+            const ease = p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p + 2, 3) / 2;
+            tile.scale = ease;
+            if (p < 1) requestAnimationFrame(anim);
+          };
+          requestAnimationFrame(anim);
+        }, delay);
       }
     }
   }
@@ -346,6 +361,12 @@
     const matches = findMatches();
     if (matches.size === 0) {
       swapCells(r1, c1, r2, c2); // revert
+      // Flash the tile briefly to signal invalid swap
+      const t = board[r1][c1];
+      if (t) {
+        t.alpha = 0.3;
+        setTimeout(() => { if (board[r1]?.[c1] === t) t.alpha = 1; }, 200);
+      }
       return;
     }
     gamePhase      = 'SWAPPING';
