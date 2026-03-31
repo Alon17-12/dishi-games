@@ -159,6 +159,10 @@
     requestAnimationFrame(gameLoop);
   }
   function update(dt) {
+    // Score popups animate in every phase (not just REMOVING)
+    scorePopups.forEach(p => { p.offsetY += p.vy * dt; p.alpha -= dt * 2; });
+    scorePopups = scorePopups.filter(p => p.alpha > 0);
+
     if (gamePhase === 'SWAPPING') {
       swapAnim.progress += dt / SWAP_DURATION;
       if (swapAnim.progress >= 1) {
@@ -176,10 +180,6 @@
           if (board[r][c]?.removing) board[r][c].alpha = flashAlpha;
         }
       }
-      // Animate score popups
-      scorePopups.forEach(p => { p.y += p.vy * dt; p.alpha -= dt * 2; });
-      scorePopups = scorePopups.filter(p => p.alpha > 0);
-
       if (removeTimer <= 0) {
         // Remove tiles
         for (let r = 0; r < ROWS; r++) {
@@ -263,7 +263,8 @@
       ctx.textAlign    = 'center';
       ctx.shadowColor  = 'rgba(0,0,0,0.8)';
       ctx.shadowBlur   = 4;
-      ctx.fillText(p.text, p.x, p.y);
+      // Convert board-space coords to pixels at current TILE_SIZE (resize-safe)
+      ctx.fillText(p.text, p.boardC * TILE_SIZE, p.boardR * TILE_SIZE + p.offsetY);
       ctx.restore();
     });
     // Selection highlight
@@ -280,7 +281,7 @@
     }
   }
 
-  function restartGame() { lastTime = 0; selected = null; gamePhase = 'IDLE'; score = 0; scorePopups = []; document.getElementById('score-val').textContent = 0; initBoard(); render(); }
+  function restartGame() { lastTime = 0; selected = null; gamePhase = 'IDLE'; score = 0; scorePopups = []; cascadeLevel = 0; document.getElementById('score-val').textContent = 0; initBoard(); render(); }
   document.getElementById('restart-btn').addEventListener('click', restartGame);
   function swapCells(r1, c1, r2, c2) {
     const tmp    = board[r1][c1];
@@ -348,9 +349,11 @@
     let sumR = 0, sumC = 0;
     matches.forEach(key => { const [r, c] = key.split(',').map(Number); sumR += r; sumC += c; });
     const avgR = sumR / matches.size, avgC = sumC / matches.size;
+    // Store board-space coords; convert to pixels in render() so resize is safe
     scorePopups.push({
-      x: (avgC + 0.5) * TILE_SIZE,
-      y: (avgR + 0.5) * TILE_SIZE,
+      boardR: avgR + 0.5,   // fractional row
+      boardC: avgC + 0.5,   // fractional col
+      offsetY: 0,           // pixel offset from board position (animated)
       text: `+${pts}`,
       alpha: 1,
       vy: -80,
@@ -358,10 +361,7 @@
   }
 
   function startFalling() {
-    gamePhase = 'FALLING';
-    // Implemented in Task 6
-    console.log('falling...');
-    // Temporary: go back to IDLE so game stays playable
+    // Implemented in Task 6; temporarily skip to IDLE so game stays playable
     gamePhase = 'IDLE';
   }
 
