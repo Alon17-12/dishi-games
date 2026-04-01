@@ -551,6 +551,32 @@
     return matched;
   }
 
+  // Returns the longest consecutive run of matched tiles in any single row or column
+  function maxRunLength(matches) {
+    const byRow = new Map(), byCol = new Map();
+    matches.forEach(key => {
+      const [r, c] = key.split(',').map(Number);
+      if (!byRow.has(r)) byRow.set(r, []);
+      byRow.get(r).push(c);
+      if (!byCol.has(c)) byCol.set(c, []);
+      byCol.get(c).push(r);
+    });
+    function longestRun(arr) {
+      if (!arr.length) return 0;
+      arr.sort((a, b) => a - b);
+      let run = 1, best = 1;
+      for (let i = 1; i < arr.length; i++) {
+        run = arr[i] === arr[i-1] + 1 ? run + 1 : 1;
+        if (run > best) best = run;
+      }
+      return best;
+    }
+    let max = 0;
+    for (const cols of byRow.values()) max = Math.max(max, longestRun(cols));
+    for (const rows of byCol.values()) max = Math.max(max, longestRun(rows));
+    return max;
+  }
+
   function startRemoving(matches) {
     removeTimer = REMOVE_DURATION;
     matches.forEach(key => {
@@ -563,11 +589,13 @@
     score += pts;
     document.getElementById('score-val').textContent = score;
 
-    // Time bonus: +1s per 3 tiles; cascade doubles it; cap 8s per hit
-    const rawBonus = Math.max(1, Math.floor(matches.size / 3));
-    const bonus    = Math.min(8, cascadeLevel > 0 ? rawBonus * 2 : rawBonus);
-    timeLeft = Math.min(MAX_TIME, timeLeft + bonus);
-    showBonusFlash(`+${bonus}s ⏱`);
+    // Time bonus: only for runs of 4+ or 5+ in a single row/column
+    const maxRun = maxRunLength(matches);
+    const bonus  = maxRun >= 5 ? 5 : maxRun >= 4 ? 2 : 0;
+    if (bonus > 0) {
+      timeLeft = Math.min(MAX_TIME, timeLeft + bonus);
+      showBonusFlash(`+${bonus}s ⏱`);
+    }
 
     // Score popup at centroid
     let sumR = 0, sumC = 0;
