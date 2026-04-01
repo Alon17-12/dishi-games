@@ -122,6 +122,12 @@
       box-shadow: 0 4px 20px rgba(255,107,53,0.45); transition: transform 0.18s;
     }
     .btn:hover { transform: scale(1.06); }
+    #save-status {
+      font-size: 0.78rem; color: rgba(240,224,208,0.55);
+      min-height: 18px; text-align: center;
+    }
+    #save-status.saved  { color: rgba(100,220,130,0.85); }
+    #save-status.nosave { color: rgba(240,200,130,0.65); }
   </style>
 </head>
 <body>
@@ -141,10 +147,33 @@
 <div id="result">
   <div id="result-title"></div>
   <div id="result-stats"></div>
+  <div id="save-status"></div>
   <button class="btn" id="result-btn">🎮 משחק חדש</button>
 </div>
 
-<script>
+<script type="module">
+async function trySaveScore(score) {
+  const el = document.getElementById('save-status');
+  el.className = ''; el.textContent = '⏳ שומר ניקוד...';
+  try {
+    const [{ saveScore }, { auth }] = await Promise.all([
+      import('../leaderboard.js'),
+      import('../firebase-config.js'),
+    ]);
+    if (!auth.currentUser) {
+      el.className = 'nosave';
+      el.textContent = '🔒 התחבר בלובי כדי לשמור ניקוד';
+      return;
+    }
+    await saveScore('dishi-wordsearch', auth.currentUser, score);
+    el.className = 'saved';
+    el.textContent = `✅ ניקוד נשמר! (${auth.currentUser.displayName})`;
+  } catch (e) {
+    el.textContent = '';
+    console.warn('Score not saved:', e);
+  }
+}
+
 const GAME_DURATION = 60;
 const GRID_SIZE     = 11;
 const DIRECTIONS    = [
@@ -594,7 +623,10 @@ function endGame() {
     foundList.length >= total * 0.7 ? '🎉 כל הכבוד!' :
     foundList.length >= total * 0.4 ? '👍 לא רע!' : '😅 אפשר יותר טוב';
 
+  document.getElementById('save-status').className = '';
+  document.getElementById('save-status').textContent = '';
   document.getElementById('result').classList.add('show');
+  trySaveScore(score);
 }
 
 // ── Start game ────────────────────────────────────────────────────────────────

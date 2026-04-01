@@ -145,6 +145,9 @@
       transition: transform 0.18s, box-shadow 0.18s;
     }
     .btn:hover { transform: scale(1.07); box-shadow: 0 6px 32px rgba(196,77,255,0.7), inset 0 1px 0 rgba(255,255,255,0.35); }
+    #save-status { font-size: 0.78rem; color: rgba(255,255,255,0.45); min-height: 18px; text-align: center; }
+    #save-status.saved  { color: rgba(100,255,160,0.85); }
+    #save-status.nosave { color: rgba(255,220,130,0.65); }
   </style>
 </head>
 <body>
@@ -167,6 +170,7 @@
   <div id="overlay">
     <div id="ov-title">⏰ נגמר הזמן!</div>
     <div id="ov-score"></div>
+    <div id="save-status"></div>
     <button class="btn" id="restart-btn">🍬 שחק שוב</button>
   </div>
 
@@ -473,19 +477,28 @@
     document.getElementById('urgent-overlay').classList.remove('show');
     document.getElementById('timer-val').classList.remove('urgent');
     document.getElementById('ov-score').textContent = `⭐ ${score} נקודות`;
+    const saveEl = document.getElementById('save-status');
+    saveEl.className = ''; saveEl.textContent = '⏳ שומר ניקוד...';
     document.getElementById('overlay').classList.add('show');
     try {
       const [{ saveScore }, { auth }] = await Promise.all([
         import('../leaderboard.js'),
         import('../firebase-config.js'),
       ]);
+      if (!auth.currentUser) {
+        saveEl.className = 'nosave'; saveEl.textContent = '🔒 התחבר בלובי כדי לשמור ניקוד';
+        return;
+      }
       await saveScore('candy-dishi', auth.currentUser, score);
-    } catch (e) { console.warn('Score not saved:', e); }
+      saveEl.className = 'saved'; saveEl.textContent = `✅ ניקוד נשמר! (${auth.currentUser.displayName})`;
+    } catch (e) { saveEl.textContent = ''; console.warn('Score not saved:', e); }
   }
 
   function restartGame() {
     document.getElementById('overlay').classList.remove('show');
     document.getElementById('urgent-overlay').classList.remove('show');
+    const saveEl = document.getElementById('save-status');
+    saveEl.className = ''; saveEl.textContent = '';
     document.getElementById('timer-val').classList.remove('urgent');
     lastTime       = 0;
     selected       = null;

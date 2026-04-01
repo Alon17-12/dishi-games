@@ -251,6 +251,9 @@
       transition: transform 0.18s, box-shadow 0.18s;
     }
     .btn:hover { transform: scale(1.06); box-shadow: 0 6px 28px rgba(255,107,53,0.65); }
+    #save-status { font-size: 0.78rem; color: rgba(240,224,208,0.55); min-height: 18px; text-align: center; }
+    #save-status.saved  { color: rgba(100,220,130,0.85); }
+    #save-status.nosave { color: rgba(240,200,130,0.65); }
   </style>
 </head>
 <body>
@@ -301,18 +304,26 @@
   <div id="result-word"></div>
   <div id="result-score"></div>
   <div id="result-stats"></div>
+  <div id="save-status"></div>
   <button class="btn" id="result-btn" style="display:none">🎮 משחק חדש</button>
 </div>
 
 <script type="module">
 async function trySaveScore(score) {
+  const el = document.getElementById('save-status');
+  if (el) { el.className = ''; el.textContent = '⏳ שומר ניקוד...'; }
   try {
     const [{ saveScore }, { auth }] = await Promise.all([
       import('../leaderboard.js'),
       import('../firebase-config.js'),
     ]);
+    if (!auth.currentUser) {
+      if (el) { el.className = 'nosave'; el.textContent = '🔒 התחבר בלובי כדי לשמור ניקוד'; }
+      return;
+    }
     await saveScore('dishi-hangman', auth.currentUser, score);
-  } catch (e) { console.warn('Score not saved:', e); }
+    if (el) { el.className = 'saved'; el.textContent = `✅ ניקוד נשמר! (${auth.currentUser.displayName})`; }
+  } catch (e) { if (el) el.textContent = ''; console.warn('Score not saved:', e); }
 }
 
 const isHebrew = ch => /[\u05D0-\u05EA]/.test(ch);
