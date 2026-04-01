@@ -146,7 +146,7 @@
 
 <script>
 const GAME_DURATION = 60;
-const GRID_SIZE     = 12;
+const GRID_SIZE     = 11;
 const DIRECTIONS    = [
   { dr: 0,  dc: 1  },  // LTR
   { dr: 0,  dc: -1 },  // RTL
@@ -156,21 +156,16 @@ const DIRECTIONS    = [
 const ALEPH_BET = 'אבגדהוזחטיכלמנסעפצקרשת';
 
 const WORDS = [
-  { word: 'מכולה',   hint: 'מה שדישי הוא לפעמים'        },
-  { word: 'דישי',    hint: 'הגיבור שלנו 👑'              },
-  { word: 'גור',     hint: 'כינוי חיבה'                  },
-  { word: 'משה',     hint: 'שם קלאסי'                    },
   { word: 'מסופחים', hint: 'חיילים שהושאלו לחיל אחר'    },
   { word: 'תורנים',  hint: 'מי שתורו לעשות דברים'        },
-  { word: 'רוני',    hint: 'שם שמופיע בסיפורים'          },
-  { word: 'תדר',     hint: '"אתה יורד לי מה..."'          },
-  { word: 'בלאי',    hint: 'ציוד שנשחק'                  },
+  { word: 'מכולה',   hint: 'מה שדישי הוא לפעמים'        },
   { word: 'רספיה',   hint: 'מלכות דישי'                  },
   { word: 'גזרות',   hint: 'דברים שאין ברירה לעשות'      },
-  { word: 'דנה',     hint: 'שם נשי'                      },
   { word: 'מגבים',   hint: 'כלי ניקיון נפוץ'             },
-  { word: 'נייר',    hint: 'חומר גלם לטואלט'             },
   { word: 'מטבח',    hint: 'איפה הרספיה מתרחשת'          },
+  { word: 'בלאי',    hint: 'ציוד שנשחק'                  },
+  { word: 'דישי',    hint: 'הגיבור שלנו 👑'              },
+  { word: 'רוני',    hint: 'שם שמופיע בסיפורים'          },
 ];
 
 // ── Highlight colours per found word (cycles) ─────────────────────────────
@@ -316,6 +311,8 @@ function checkSelection() {
       const pts = Math.round(p.word.length * 15 * (1 + timeLeft / GAME_DURATION));
       score += pts;
       document.getElementById('scoreDisplay').textContent = score;
+      timeLeft = Math.min(timeLeft + 5, 120);
+      updateTimerDisplay(false);
       markWordFound(p.word);
       // Brief flash on cells
       break;
