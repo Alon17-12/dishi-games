@@ -258,6 +258,7 @@
     .card-flappy  { --card-glow: 0 0 20px rgba(57,255,20,0.15); }
     .card-hangman { --card-glow: 0 0 20px rgba(0,245,255,0.15); }
     .card-candy   { --card-glow: 0 0 20px rgba(255,107,157,0.2); }
+    .card-words   { --card-glow: 0 0 20px rgba(100,220,255,0.2); }
 
     .card-icon { font-size:2.6rem; display:block; margin-bottom:10px; }
     .card-name {
@@ -532,6 +533,11 @@
         <div class="card-name">קנדישי</div>
         <div class="card-sub">Match 3 הכי מלוכלך</div>
       </div>
+      <div class="game-card card-words" onclick="openGame('dishi-wordsearch','תשחץ דישי')">
+        <span class="card-icon">🔍</span>
+        <div class="card-name">תשחץ דישי</div>
+        <div class="card-sub">מציאת מילים</div>
+      </div>
       <div class="game-card locked">
         <span class="coming-tag">בקרוב</span>
         <span class="card-icon">🔥</span>
@@ -547,6 +553,7 @@
       <button class="lb-tab active" onclick="switchLbTab('flying-dishi',this)">🚀 דישי המעופף</button>
       <button class="lb-tab" onclick="switchLbTab('dishi-hangman',this)">🔤 דיש תלוי</button>
       <button class="lb-tab" onclick="switchLbTab('candy-dishi',this)">🍬 קנדישי</button>
+      <button class="lb-tab" onclick="switchLbTab('dishi-wordsearch',this)">🔍 תשחץ דישי</button>
     </div>
     <div class="podium" id="podium"></div>
     <div class="lb-rest" id="lbRest"></div>
