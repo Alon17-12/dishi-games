@@ -123,11 +123,17 @@
     }
     .btn:hover { transform: scale(1.06); }
     #save-status {
-      font-size: 0.78rem; color: rgba(240,224,208,0.55);
-      min-height: 18px; text-align: center;
+      display: flex; align-items: center; justify-content: center;
+      gap: 7px; font-size: 0.78rem; min-height: 28px;
+      color: rgba(240,224,208,0.55);
     }
-    #save-status.saved  { color: rgba(100,220,130,0.85); }
-    #save-status.nosave { color: rgba(240,200,130,0.65); }
+    #save-status.saved  { color: rgba(100,220,130,0.9); }
+    #save-status.nosave { color: rgba(240,200,130,0.7); }
+    #save-status img {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 2px solid rgba(100,220,130,0.5);
+      object-fit: cover;
+    }
   </style>
 </head>
 <body>
@@ -166,8 +172,9 @@ async function trySaveScore(score) {
       return;
     }
     await saveScore('dishi-wordsearch', auth.currentUser, score);
+    const u = auth.currentUser;
     el.className = 'saved';
-    el.textContent = `✅ ניקוד נשמר! (${auth.currentUser.displayName})`;
+    el.innerHTML = `${u.photoURL ? `<img src="${u.photoURL}" alt="">` : ''}✅ שלום ${u.displayName}! ניקוד נשמר`;
   } catch (e) {
     el.textContent = '';
     console.warn('Score not saved:', e);
