@@ -210,13 +210,13 @@ const BLOCK_TYPES = {
 
 // ─── Enemy types (dirty things) ──────────
 const ENEMY_TYPES = [
-  { emoji: '🍽️', name: 'צלחת מלוכלכת', points: 100 },
-  { emoji: '🥤', name: 'כוס מלוכלכת', points: 120 },
-  { emoji: '🧻', name: 'גליל נייר', points: 80 },
-  { emoji: '💩', name: 'קקי סטיק', points: 150 },
-  { emoji: '🪣', name: 'דלי מלוכלך', points: 130 },
+  { emoji: '🍽️', name: 'צלחת מלוכלכת', points: 100, hp: 2 },
+  { emoji: '🥤', name: 'כוס מלוכלכת', points: 120, hp: 2 },
+  { emoji: '🧻', name: 'גליל נייר', points: 80, hp: 1 },
+  { emoji: '💩', name: 'קקי סטיק', points: 150, hp: 3 },
+  { emoji: '🪣', name: 'דלי מלוכלך', points: 130, hp: 2 },
 ];
-const ENEMY_R = 13; // smaller hit radius — harder to hit
+const ENEMY_R = 12;
 
 // ═══════════════════════════════════════════
 //  LEVELS (10 total)
@@ -231,125 +231,142 @@ function generateLevels() {
   // Helper: create enemy
   function E(x, y, typeIdx = 0) {
     const t = ENEMY_TYPES[typeIdx % ENEMY_TYPES.length];
-    return { x, y, r: ENEMY_R, ...t, alive: true, vx: 0, vy: 0 };
+    return { x, y, r: ENEMY_R, emoji: t.emoji, name: t.name, points: t.points, hp: t.hp, alive: true, vx: 0, vy: 0 };
   }
 
   // Scale positions relative to canvas
   const rX = (frac) => Math.round(W() * frac);
   const bY = (up) => H() - 60 - up;
 
-  // Level 1: Simple tower, 1 enemy
+  // ── Level 1: Simple shelter — enemy INSIDE a wooden box ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.6), bY(25), 60, 25, 'wood'),
-      B(rX(0.6), bY(50), 60, 25, 'wood'),
-      B(rX(0.6), bY(75), 60, 25, 'wood'),
+      B(rX(0.62), bY(0), 15, 50, 'wood'),  // left wall
+      B(rX(0.73), bY(0), 15, 50, 'wood'),  // right wall
+      B(rX(0.62), bY(50), 130, 15, 'wood'), // roof
     ],
-    enemies: [E(rX(0.6) + 30, bY(95), 0)],
+    enemies: [E(rX(0.68), bY(12), 0)], // sheltered inside
   }));
 
-  // Level 2: Two small towers
+  // ── Level 2: Two shelters side by side ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.55), bY(25), 50, 25, 'wood'),
-      B(rX(0.55), bY(50), 50, 25, 'wood'),
-      B(rX(0.72), bY(25), 50, 25, 'wood'),
-      B(rX(0.72), bY(50), 50, 25, 'wood'),
-      B(rX(0.55), bY(75), 230, 15, 'wood'), // bridge
+      // Shelter A
+      B(rX(0.5), bY(0), 12, 45, 'wood'), B(rX(0.6), bY(0), 12, 45, 'wood'),
+      B(rX(0.5), bY(45), 80, 12, 'wood'),
+      // Shelter B
+      B(rX(0.7), bY(0), 12, 45, 'wood'), B(rX(0.8), bY(0), 12, 45, 'wood'),
+      B(rX(0.7), bY(45), 80, 12, 'wood'),
     ],
-    enemies: [E(rX(0.6), bY(95), 1), E(rX(0.75), bY(55), 2)],
+    enemies: [E(rX(0.56), bY(12), 1), E(rX(0.76), bY(12), 2)],
   }));
 
-  // Level 3: Glass fortress
+  // ── Level 3: Glass bunker — fragile but enclosed ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.6), bY(25), 80, 20, 'glass'),
-      B(rX(0.6), bY(45), 80, 20, 'glass'),
-      B(rX(0.6), bY(65), 80, 20, 'glass'),
-      B(rX(0.56), bY(25), 20, 65, 'glass'),
-      B(rX(0.72), bY(25), 20, 65, 'glass'),
+      B(rX(0.58), bY(0), 15, 60, 'glass'),  // left wall
+      B(rX(0.75), bY(0), 15, 60, 'glass'),  // right wall
+      B(rX(0.58), bY(60), 175, 12, 'glass'), // roof
+      B(rX(0.58), bY(30), 175, 10, 'glass'), // inner shelf
     ],
-    enemies: [E(rX(0.65), bY(30), 0), E(rX(0.65), bY(80), 3)],
+    enemies: [E(rX(0.67), bY(12), 0), E(rX(0.67), bY(42), 3)],
   }));
 
-  // Level 4: Stone base, wood top
+  // ── Level 4: Stone walls, wood roof — need to break the roof ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.55), bY(25), 120, 25, 'stone'),
-      B(rX(0.55), bY(50), 40, 50, 'wood'),
-      B(rX(0.65), bY(50), 40, 50, 'wood'),
-      B(rX(0.55), bY(100), 120, 15, 'wood'),
+      B(rX(0.55), bY(0), 20, 80, 'stone'),  // left wall (strong!)
+      B(rX(0.75), bY(0), 20, 80, 'stone'),  // right wall (strong!)
+      B(rX(0.55), bY(80), 200, 15, 'wood'),  // breakable roof
+      B(rX(0.62), bY(40), 100, 10, 'wood'),  // inner platform
     ],
-    enemies: [E(rX(0.6), bY(115), 4), E(rX(0.7), bY(55), 1)],
+    enemies: [E(rX(0.66), bY(12), 4), E(rX(0.66), bY(52), 1)],
   }));
 
-  // Level 5: Pyramid
+  // ── Level 5: Pyramid bunker — layered defense ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.5), bY(25), 200, 20, 'wood'),
-      B(rX(0.53), bY(45), 150, 20, 'wood'),
-      B(rX(0.56), bY(65), 100, 20, 'wood'),
-      B(rX(0.59), bY(85), 50, 20, 'stone'),
+      B(rX(0.5), bY(0), 20, 100, 'wood'),   // outer left
+      B(rX(0.78), bY(0), 20, 100, 'wood'),  // outer right
+      B(rX(0.5), bY(100), 280, 15, 'wood'),  // outer roof
+      B(rX(0.58), bY(0), 15, 55, 'wood'),   // inner left
+      B(rX(0.7), bY(0), 15, 55, 'wood'),    // inner right
+      B(rX(0.58), bY(55), 120, 12, 'wood'),  // inner roof
     ],
-    enemies: [E(rX(0.6), bY(105), 0), E(rX(0.55), bY(45), 2), E(rX(0.7), bY(45), 3)],
+    enemies: [E(rX(0.64), bY(12), 0), E(rX(0.64), bY(70), 2), E(rX(0.72), bY(12), 3)],
   }));
 
-  // Level 6: Multi-platform
+  // ── Level 6: Elevated fortress — enemies on platform ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.45), bY(25), 30, 60, 'wood'), B(rX(0.55), bY(25), 30, 60, 'wood'),
-      B(rX(0.45), bY(85), 100, 15, 'wood'),
-      B(rX(0.65), bY(25), 30, 100, 'stone'), B(rX(0.8), bY(25), 30, 100, 'stone'),
-      B(rX(0.65), bY(125), 180, 15, 'wood'),
+      // Base pillars
+      B(rX(0.5), bY(0), 20, 70, 'stone'), B(rX(0.75), bY(0), 20, 70, 'stone'),
+      B(rX(0.5), bY(70), 250, 18, 'stone'),  // stone platform
+      // Shelter on top
+      B(rX(0.55), bY(88), 12, 50, 'wood'), B(rX(0.7), bY(88), 12, 50, 'wood'),
+      B(rX(0.55), bY(138), 160, 12, 'wood'),
     ],
-    enemies: [E(rX(0.5), bY(100), 1), E(rX(0.72), bY(140), 4), E(rX(0.78), bY(30), 0)],
+    enemies: [E(rX(0.63), bY(100), 1), E(rX(0.63), bY(14), 4)],
   }));
 
-  // Level 7: Glass + stone maze
+  // ── Level 7: Maze — stone walls with glass weak points ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.5), bY(25), 20, 80, 'stone'), B(rX(0.65), bY(25), 20, 80, 'stone'),
-      B(rX(0.5), bY(105), 170, 15, 'glass'),
-      B(rX(0.55), bY(120), 40, 30, 'glass'), B(rX(0.62), bY(120), 40, 30, 'glass'),
-      B(rX(0.5), bY(150), 170, 15, 'wood'),
+      B(rX(0.5), bY(0), 20, 120, 'stone'),   // left wall
+      B(rX(0.78), bY(0), 20, 120, 'stone'),  // right wall
+      B(rX(0.5), bY(120), 280, 18, 'stone'), // roof (stone!)
+      // Internal divisions with glass weak points
+      B(rX(0.6), bY(0), 10, 40, 'glass'),     // inner wall bottom
+      B(rX(0.6), bY(55), 10, 65, 'stone'),    // inner wall top (stone)
+      B(rX(0.7), bY(40), 10, 80, 'glass'),    // second inner wall
     ],
-    enemies: [E(rX(0.57), bY(50), 3), E(rX(0.57), bY(165), 0), E(rX(0.64), bY(135), 2)],
+    enemies: [E(rX(0.55), bY(14), 3), E(rX(0.65), bY(14), 0), E(rX(0.75), bY(14), 2)],
   }));
 
-  // Level 8: Tall tower
-  levels.push(() => ({
-    blocks: Array.from({length: 8}, (_, i) =>
-      B(rX(0.6), bY(25 + i*25), 55, 25, i < 2 ? 'stone' : i < 5 ? 'wood' : 'glass')
-    ),
-    enemies: [E(rX(0.63), bY(225), 4), E(rX(0.63), bY(130), 1)],
-  }));
-
-  // Level 9: Fortress
+  // ── Level 8: Tall tower — enemies stacked inside ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.45), bY(25), 25, 120, 'stone'), B(rX(0.75), bY(25), 25, 120, 'stone'),
-      B(rX(0.45), bY(145), 200, 20, 'stone'),
-      B(rX(0.52), bY(25), 20, 60, 'wood'), B(rX(0.68), bY(25), 20, 60, 'wood'),
-      B(rX(0.52), bY(85), 180, 15, 'wood'),
-      B(rX(0.55), bY(100), 40, 25, 'glass'), B(rX(0.65), bY(100), 40, 25, 'glass'),
+      B(rX(0.6), bY(0), 15, 180, 'wood'),    // left wall
+      B(rX(0.73), bY(0), 15, 180, 'wood'),   // right wall
+      B(rX(0.6), bY(45), 130, 10, 'wood'),   // floor 1
+      B(rX(0.6), bY(90), 130, 10, 'wood'),   // floor 2
+      B(rX(0.6), bY(135), 130, 10, 'wood'),  // floor 3
+      B(rX(0.6), bY(180), 130, 12, 'stone'), // roof
     ],
-    enemies: [E(rX(0.58), bY(50), 0), E(rX(0.68), bY(50), 3), E(rX(0.6), bY(160), 4), E(rX(0.6), bY(115), 1)],
+    enemies: [E(rX(0.67), bY(14), 4), E(rX(0.67), bY(58), 1), E(rX(0.67), bY(103), 0)],
   }));
 
-  // Level 10: Final boss — everything
+  // ── Level 9: Double fortress ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.4), bY(25), 25, 150, 'stone'), B(rX(0.8), bY(25), 25, 150, 'stone'),
-      B(rX(0.4), bY(175), 280, 20, 'stone'),
-      B(rX(0.5), bY(25), 20, 70, 'wood'), B(rX(0.7), bY(25), 20, 70, 'wood'),
-      B(rX(0.5), bY(95), 200, 15, 'wood'),
-      B(rX(0.55), bY(110), 30, 40, 'glass'), B(rX(0.65), bY(110), 30, 40, 'glass'),
-      B(rX(0.55), bY(150), 130, 15, 'glass'),
-      B(rX(0.58), bY(25), 20, 50, 'glass'), B(rX(0.66), bY(25), 20, 50, 'glass'),
+      // Fort A (stone)
+      B(rX(0.45), bY(0), 18, 80, 'stone'), B(rX(0.6), bY(0), 18, 80, 'stone'),
+      B(rX(0.45), bY(80), 130, 15, 'stone'),
+      B(rX(0.5), bY(40), 90, 10, 'wood'), // inner shelf
+      // Fort B (stone + glass)
+      B(rX(0.68), bY(0), 18, 80, 'stone'), B(rX(0.83), bY(0), 18, 80, 'stone'),
+      B(rX(0.68), bY(80), 130, 15, 'glass'), // glass roof — weak point!
+      B(rX(0.73), bY(40), 70, 10, 'wood'),
+    ],
+    enemies: [E(rX(0.53), bY(12), 0), E(rX(0.53), bY(52), 3), E(rX(0.76), bY(12), 4), E(rX(0.76), bY(52), 1)],
+  }));
+
+  // ── Level 10: The Bunker — full stone, glass only at top ──
+  levels.push(() => ({
+    blocks: [
+      // Outer walls (stone — nearly unbreakable)
+      B(rX(0.4), bY(0), 22, 160, 'stone'), B(rX(0.82), bY(0), 22, 160, 'stone'),
+      B(rX(0.4), bY(160), 310, 20, 'stone'), // stone roof
+      // Inner chambers
+      B(rX(0.52), bY(0), 12, 70, 'wood'), B(rX(0.7), bY(0), 12, 70, 'wood'),
+      B(rX(0.52), bY(70), 190, 12, 'wood'), // mid floor
+      B(rX(0.52), bY(115), 190, 12, 'wood'), // upper floor
+      // Glass skylight — only way in from above
+      B(rX(0.55), bY(155), 80, 10, 'glass'), B(rX(0.68), bY(155), 80, 10, 'glass'),
     ],
     enemies: [
-      E(rX(0.55), bY(50), 0), E(rX(0.68), bY(50), 3),
-      E(rX(0.6), bY(165), 4), E(rX(0.6), bY(115), 1), E(rX(0.6), bY(190), 2),
+      E(rX(0.6), bY(14), 0), E(rX(0.72), bY(14), 3),
+      E(rX(0.6), bY(82), 4), E(rX(0.72), bY(82), 1), E(rX(0.6), bY(127), 2),
     ],
   }));
 
@@ -662,28 +679,46 @@ function checkCollisions() {
     }
   });
 
-  // Bird vs enemies
+  // Bird vs enemies — need real speed to damage
   enemies.forEach(e => {
     if (!e.alive) return;
     const dx = bird.x - e.x, dy = bird.y - e.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     if (dist < BIRD_R + e.r) {
-      e.alive = false;
-      levelScore += e.points;
-      spawnParticles(e.x, e.y, '#FFD700');
+      const speed = Math.sqrt(bird.vx*bird.vx + bird.vy*bird.vy);
+      if (speed > 2.5) {
+        const dmg = Math.ceil((speed - 2) / 3);
+        e.hp -= dmg;
+        // Push enemy
+        e.vx = bird.vx * 0.3;
+        e.vy = bird.vy * 0.3;
+        if (e.hp <= 0) {
+          e.alive = false;
+          levelScore += e.points;
+          spawnParticles(e.x, e.y, '#FFD700');
+        }
+      }
+      // Bird loses energy regardless
+      bird.vx *= 0.3;
+      bird.vy *= 0.3;
       updateHUD();
     }
   });
 
-  // Blocks falling on enemies
+  // Blocks falling on enemies — only if block is moving fast enough
   enemies.forEach(e => {
     if (!e.alive) return;
     blocks.forEach(b => {
       if (b.hp <= 0) return;
+      const blockSpeed = Math.sqrt((b.vx||0)**2 + (b.vy||0)**2);
+      if (blockSpeed < 1.5) return; // block must be moving
       if (e.x > b.x && e.x < b.x+b.w && e.y > b.y && e.y < b.y+b.h) {
-        e.alive = false;
-        levelScore += e.points;
-        spawnParticles(e.x, e.y, '#FF6600');
+        e.hp -= 1;
+        if (e.hp <= 0) {
+          e.alive = false;
+          levelScore += e.points;
+          spawnParticles(e.x, e.y, '#FF6600');
+        }
         updateHUD();
       }
     });
@@ -811,17 +846,25 @@ function endLevel(cleared) {
   clearInterval(timerInterval);
   gamePhase = 'LEVEL_DONE';
 
-  // Bonus for remaining birds and time
-  const birdBonus = birdsLeft * 200;
-  const timeBonus = timeLeft * 10;
-  const clearBonus = cleared ? 500 : 0;
+  // Bonus for remaining birds and time (modest)
+  const birdBonus = birdsLeft * 80;
+  const timeBonus = Math.round(timeLeft * 3);
+  const clearBonus = cleared ? 200 : 0;
   levelScore += birdBonus + timeBonus + clearBonus;
   totalScore += levelScore;
 
-  // Stars
-  const maxEnemyPts = enemies.reduce((s, e) => s + e.points, 0);
-  const ratio = levelScore / (maxEnemyPts + 1500);
-  const stars = ratio >= 0.8 ? 3 : ratio >= 0.5 ? 2 : ratio > 0 ? 1 : 0;
+  // Stars based on: enemies killed + birds remaining
+  const enemiesKilled = enemies.filter(e => !e.alive).length;
+  const totalEnemies = enemies.length;
+  const allKilled = enemiesKilled === totalEnemies;
+  // 3 stars: all killed with 2+ birds remaining
+  // 2 stars: all killed
+  // 1 star: at least half killed
+  // 0 stars: less than half
+  const stars = (allKilled && birdsLeft >= 2) ? 3
+              : allKilled ? 2
+              : (enemiesKilled >= totalEnemies / 2) ? 1
+              : 0;
 
   const ov = document.getElementById('overlay');
   document.getElementById('ov-title').textContent = cleared ? '🎉 שלב הושלם!' : '💔 נגמרו הדישים!';
