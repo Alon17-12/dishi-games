@@ -149,7 +149,13 @@ function resizeCanvas() {
   canvas.height = Math.min(window.innerHeight - 40, 560);
 }
 resizeCanvas();
-window.addEventListener('resize', () => { resizeCanvas(); });
+window.addEventListener('resize', () => {
+  // Only resize if not mid-game (blocks are positioned for specific canvas size)
+  if (gamePhase === 'AIM' && !bird && settleTimer <= 0) {
+    resizeCanvas();
+    if (_started) loadLevel(currentLevel);
+  }
+});
 
 const W = () => canvas.width;
 const H = () => canvas.height;
@@ -236,137 +242,139 @@ function generateLevels() {
 
   // Scale positions relative to canvas
   const rX = (frac) => Math.round(W() * frac);
-  const bY = (up) => H() - 60 - up;
+  const gY = H() - 60; // ground Y
+  // bY(up) = ground minus up — for block TOP-LEFT corner
+  const bY = (up) => gY - up;
+
+  // Helper: block with BOTTOM at ground + up pixels
+  // B2(x, bottomUp, w, h, type) — bottom of block is `bottomUp` pixels above ground
+  function B2(x, bottomUp, w, h, type = 'wood') {
+    return B(x, gY - bottomUp - h, w, h, type);
+  }
+  // Helper: enemy with CENTER at ground + up pixels
+  function E2(x, centerUp, typeIdx = 0) {
+    return E(x, gY - centerUp, typeIdx);
+  }
 
   // ── Level 1: Simple shelter — enemy INSIDE a wooden box ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.62), bY(0), 15, 50, 'wood'),  // left wall
-      B(rX(0.73), bY(0), 15, 50, 'wood'),  // right wall
-      B(rX(0.62), bY(50), 130, 15, 'wood'), // roof
+      B2(rX(0.62), 0, 15, 55, 'wood'),   // left wall on ground
+      B2(rX(0.73), 0, 15, 55, 'wood'),   // right wall on ground
+      B2(rX(0.62), 55, 130, 14, 'wood'), // roof sitting on walls
     ],
-    enemies: [E(rX(0.68), bY(12), 0)], // sheltered inside
+    enemies: [E2(rX(0.68), 15, 0)],      // inside, on ground
   }));
 
   // ── Level 2: Two shelters side by side ──
   levels.push(() => ({
     blocks: [
-      // Shelter A
-      B(rX(0.5), bY(0), 12, 45, 'wood'), B(rX(0.6), bY(0), 12, 45, 'wood'),
-      B(rX(0.5), bY(45), 80, 12, 'wood'),
-      // Shelter B
-      B(rX(0.7), bY(0), 12, 45, 'wood'), B(rX(0.8), bY(0), 12, 45, 'wood'),
-      B(rX(0.7), bY(45), 80, 12, 'wood'),
+      B2(rX(0.48), 0, 12, 50, 'wood'), B2(rX(0.6), 0, 12, 50, 'wood'),
+      B2(rX(0.48), 50, 90, 12, 'wood'),
+      B2(rX(0.7), 0, 12, 50, 'wood'), B2(rX(0.82), 0, 12, 50, 'wood'),
+      B2(rX(0.7), 50, 90, 12, 'wood'),
     ],
-    enemies: [E(rX(0.56), bY(12), 1), E(rX(0.76), bY(12), 2)],
+    enemies: [E2(rX(0.54), 15, 1), E2(rX(0.76), 15, 2)],
   }));
 
   // ── Level 3: Glass bunker — fragile but enclosed ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.58), bY(0), 15, 60, 'glass'),  // left wall
-      B(rX(0.75), bY(0), 15, 60, 'glass'),  // right wall
-      B(rX(0.58), bY(60), 175, 12, 'glass'), // roof
-      B(rX(0.58), bY(30), 175, 10, 'glass'), // inner shelf
+      B2(rX(0.56), 0, 15, 65, 'glass'),
+      B2(rX(0.76), 0, 15, 65, 'glass'),
+      B2(rX(0.56), 65, 195, 12, 'glass'),  // roof
+      B2(rX(0.56), 30, 195, 10, 'glass'),  // inner shelf
     ],
-    enemies: [E(rX(0.67), bY(12), 0), E(rX(0.67), bY(42), 3)],
+    enemies: [E2(rX(0.67), 15, 0), E2(rX(0.67), 45, 3)],
   }));
 
-  // ── Level 4: Stone walls, wood roof — need to break the roof ──
+  // ── Level 4: Stone walls, wood roof ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.55), bY(0), 20, 80, 'stone'),  // left wall (strong!)
-      B(rX(0.75), bY(0), 20, 80, 'stone'),  // right wall (strong!)
-      B(rX(0.55), bY(80), 200, 15, 'wood'),  // breakable roof
-      B(rX(0.62), bY(40), 100, 10, 'wood'),  // inner platform
+      B2(rX(0.53), 0, 20, 85, 'stone'),
+      B2(rX(0.76), 0, 20, 85, 'stone'),
+      B2(rX(0.53), 85, 220, 15, 'wood'),   // breakable roof
+      B2(rX(0.6), 40, 120, 10, 'wood'),    // inner platform
     ],
-    enemies: [E(rX(0.66), bY(12), 4), E(rX(0.66), bY(52), 1)],
+    enemies: [E2(rX(0.66), 15, 4), E2(rX(0.66), 55, 1)],
   }));
 
   // ── Level 5: Pyramid bunker — layered defense ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.5), bY(0), 20, 100, 'wood'),   // outer left
-      B(rX(0.78), bY(0), 20, 100, 'wood'),  // outer right
-      B(rX(0.5), bY(100), 280, 15, 'wood'),  // outer roof
-      B(rX(0.58), bY(0), 15, 55, 'wood'),   // inner left
-      B(rX(0.7), bY(0), 15, 55, 'wood'),    // inner right
-      B(rX(0.58), bY(55), 120, 12, 'wood'),  // inner roof
+      B2(rX(0.48), 0, 18, 105, 'wood'),    // outer left
+      B2(rX(0.8), 0, 18, 105, 'wood'),     // outer right
+      B2(rX(0.48), 105, 300, 14, 'wood'),   // outer roof
+      B2(rX(0.56), 0, 14, 58, 'wood'),     // inner left
+      B2(rX(0.72), 0, 14, 58, 'wood'),     // inner right
+      B2(rX(0.56), 58, 140, 12, 'wood'),   // inner roof
     ],
-    enemies: [E(rX(0.64), bY(12), 0), E(rX(0.64), bY(70), 2), E(rX(0.72), bY(12), 3)],
+    enemies: [E2(rX(0.64), 15, 0), E2(rX(0.64), 75, 2), E2(rX(0.73), 15, 3)],
   }));
 
-  // ── Level 6: Elevated fortress — enemies on platform ──
+  // ── Level 6: Elevated fortress ──
   levels.push(() => ({
     blocks: [
-      // Base pillars
-      B(rX(0.5), bY(0), 20, 70, 'stone'), B(rX(0.75), bY(0), 20, 70, 'stone'),
-      B(rX(0.5), bY(70), 250, 18, 'stone'),  // stone platform
-      // Shelter on top
-      B(rX(0.55), bY(88), 12, 50, 'wood'), B(rX(0.7), bY(88), 12, 50, 'wood'),
-      B(rX(0.55), bY(138), 160, 12, 'wood'),
+      B2(rX(0.48), 0, 20, 75, 'stone'), B2(rX(0.76), 0, 20, 75, 'stone'),
+      B2(rX(0.48), 75, 270, 18, 'stone'),  // stone platform
+      B2(rX(0.54), 93, 12, 55, 'wood'), B2(rX(0.72), 93, 12, 55, 'wood'),
+      B2(rX(0.54), 148, 170, 12, 'wood'),  // shelter roof on top
     ],
-    enemies: [E(rX(0.63), bY(100), 1), E(rX(0.63), bY(14), 4)],
+    enemies: [E2(rX(0.63), 108, 1), E2(rX(0.63), 15, 4)],
   }));
 
   // ── Level 7: Maze — stone walls with glass weak points ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.5), bY(0), 20, 120, 'stone'),   // left wall
-      B(rX(0.78), bY(0), 20, 120, 'stone'),  // right wall
-      B(rX(0.5), bY(120), 280, 18, 'stone'), // roof (stone!)
-      // Internal divisions with glass weak points
-      B(rX(0.6), bY(0), 10, 40, 'glass'),     // inner wall bottom
-      B(rX(0.6), bY(55), 10, 65, 'stone'),    // inner wall top (stone)
-      B(rX(0.7), bY(40), 10, 80, 'glass'),    // second inner wall
+      B2(rX(0.48), 0, 20, 125, 'stone'),
+      B2(rX(0.8), 0, 20, 125, 'stone'),
+      B2(rX(0.48), 125, 310, 18, 'stone'), // stone roof
+      B2(rX(0.6), 0, 10, 45, 'glass'),     // inner wall bottom (glass — weak!)
+      B2(rX(0.6), 60, 10, 65, 'stone'),    // inner wall top (stone)
+      B2(rX(0.7), 0, 10, 85, 'glass'),     // second inner wall (glass)
     ],
-    enemies: [E(rX(0.55), bY(14), 3), E(rX(0.65), bY(14), 0), E(rX(0.75), bY(14), 2)],
+    enemies: [E2(rX(0.54), 15, 3), E2(rX(0.65), 15, 0), E2(rX(0.76), 15, 2)],
   }));
 
   // ── Level 8: Tall tower — enemies stacked inside ──
   levels.push(() => ({
     blocks: [
-      B(rX(0.6), bY(0), 15, 180, 'wood'),    // left wall
-      B(rX(0.73), bY(0), 15, 180, 'wood'),   // right wall
-      B(rX(0.6), bY(45), 130, 10, 'wood'),   // floor 1
-      B(rX(0.6), bY(90), 130, 10, 'wood'),   // floor 2
-      B(rX(0.6), bY(135), 130, 10, 'wood'),  // floor 3
-      B(rX(0.6), bY(180), 130, 12, 'stone'), // roof
+      B2(rX(0.59), 0, 15, 190, 'wood'),    // left wall
+      B2(rX(0.74), 0, 15, 190, 'wood'),    // right wall
+      B2(rX(0.59), 50, 140, 10, 'wood'),   // floor 1
+      B2(rX(0.59), 95, 140, 10, 'wood'),   // floor 2
+      B2(rX(0.59), 140, 140, 10, 'wood'),  // floor 3
+      B2(rX(0.59), 190, 140, 12, 'stone'), // stone roof
     ],
-    enemies: [E(rX(0.67), bY(14), 4), E(rX(0.67), bY(58), 1), E(rX(0.67), bY(103), 0)],
+    enemies: [E2(rX(0.67), 15, 4), E2(rX(0.67), 65, 1), E2(rX(0.67), 110, 0)],
   }));
 
   // ── Level 9: Double fortress ──
   levels.push(() => ({
     blocks: [
-      // Fort A (stone)
-      B(rX(0.45), bY(0), 18, 80, 'stone'), B(rX(0.6), bY(0), 18, 80, 'stone'),
-      B(rX(0.45), bY(80), 130, 15, 'stone'),
-      B(rX(0.5), bY(40), 90, 10, 'wood'), // inner shelf
-      // Fort B (stone + glass)
-      B(rX(0.68), bY(0), 18, 80, 'stone'), B(rX(0.83), bY(0), 18, 80, 'stone'),
-      B(rX(0.68), bY(80), 130, 15, 'glass'), // glass roof — weak point!
-      B(rX(0.73), bY(40), 70, 10, 'wood'),
+      B2(rX(0.42), 0, 18, 85, 'stone'), B2(rX(0.62), 0, 18, 85, 'stone'),
+      B2(rX(0.42), 85, 150, 15, 'stone'),
+      B2(rX(0.48), 42, 100, 10, 'wood'),
+      B2(rX(0.68), 0, 18, 85, 'stone'), B2(rX(0.86), 0, 18, 85, 'stone'),
+      B2(rX(0.68), 85, 150, 15, 'glass'), // glass roof — weak!
+      B2(rX(0.74), 42, 80, 10, 'wood'),
     ],
-    enemies: [E(rX(0.53), bY(12), 0), E(rX(0.53), bY(52), 3), E(rX(0.76), bY(12), 4), E(rX(0.76), bY(52), 1)],
+    enemies: [E2(rX(0.52), 15, 0), E2(rX(0.52), 55, 3), E2(rX(0.77), 15, 4), E2(rX(0.77), 55, 1)],
   }));
 
-  // ── Level 10: The Bunker — full stone, glass only at top ──
+  // ── Level 10: The Bunker ──
   levels.push(() => ({
     blocks: [
-      // Outer walls (stone — nearly unbreakable)
-      B(rX(0.4), bY(0), 22, 160, 'stone'), B(rX(0.82), bY(0), 22, 160, 'stone'),
-      B(rX(0.4), bY(160), 310, 20, 'stone'), // stone roof
-      // Inner chambers
-      B(rX(0.52), bY(0), 12, 70, 'wood'), B(rX(0.7), bY(0), 12, 70, 'wood'),
-      B(rX(0.52), bY(70), 190, 12, 'wood'), // mid floor
-      B(rX(0.52), bY(115), 190, 12, 'wood'), // upper floor
-      // Glass skylight — only way in from above
-      B(rX(0.55), bY(155), 80, 10, 'glass'), B(rX(0.68), bY(155), 80, 10, 'glass'),
+      B2(rX(0.38), 0, 22, 170, 'stone'), B2(rX(0.84), 0, 22, 170, 'stone'),
+      B2(rX(0.38), 170, 340, 20, 'stone'),  // stone roof
+      B2(rX(0.5), 0, 12, 75, 'wood'), B2(rX(0.72), 0, 12, 75, 'wood'),
+      B2(rX(0.5), 75, 210, 12, 'wood'),     // mid floor
+      B2(rX(0.5), 120, 210, 12, 'wood'),    // upper floor
+      B2(rX(0.54), 160, 90, 10, 'glass'), B2(rX(0.68), 160, 90, 10, 'glass'), // glass skylights
     ],
     enemies: [
-      E(rX(0.6), bY(14), 0), E(rX(0.72), bY(14), 3),
-      E(rX(0.6), bY(82), 4), E(rX(0.72), bY(82), 1), E(rX(0.6), bY(127), 2),
+      E2(rX(0.6), 15, 0), E2(rX(0.72), 15, 3),
+      E2(rX(0.6), 90, 4), E2(rX(0.72), 90, 1), E2(rX(0.6), 135, 2),
     ],
   }));
 
@@ -418,7 +426,16 @@ function updateHUD() {
 //  DRAWING
 // ═══════════════════════════════════════════
 
-// Angry Birds style sky gradient
+// Pre-generate grass heights (fix flickering)
+let _grassHeights = [];
+function _initGrass() {
+  _grassHeights = [];
+  for (let gx = 0; gx < 1000; gx += 18) {
+    _grassHeights.push(8 + Math.random() * 6);
+  }
+}
+_initGrass();
+
 function drawBackground() {
   const w = W(), h = H();
   const sky = ctx.createLinearGradient(0, 0, 0, h);
@@ -447,12 +464,14 @@ function drawBackground() {
   ctx.fillStyle = '#4A7A30';
   ctx.fillRect(0, groundY, w, 8);
 
-  // Grass tufts
+  // Grass tufts (cached heights — no flicker)
   ctx.fillStyle = '#6BA34A';
+  let gi = 0;
   for (let gx = 0; gx < w; gx += 18) {
+    const gh = _grassHeights[gi++ % _grassHeights.length];
     ctx.beginPath();
     ctx.moveTo(gx, groundY);
-    ctx.lineTo(gx+4, groundY-8-Math.random()*6);
+    ctx.lineTo(gx+4, groundY - gh);
     ctx.lineTo(gx+8, groundY);
     ctx.fill();
   }
@@ -614,27 +633,47 @@ function drawBirdQueue() {
 }
 
 // ═══════════════════════════════════════════
-//  PHYSICS
+//  PHYSICS (with proper collision resolution)
 // ═══════════════════════════════════════════
+const GROUND_Y = () => H() - 60;
+
+function rectCircleCollision(rect, circle) {
+  const cx = Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
+  const cy = Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
+  const dx = circle.x - cx, dy = circle.y - cy;
+  return (dx*dx + dy*dy) < (BIRD_R * BIRD_R);
+}
+
+// Find the surface Y for an object at position x — checks blocks and ground
+function findSurfaceY(x, w, selfBlock) {
+  let surfY = GROUND_Y();
+  for (const b of blocks) {
+    if (b === selfBlock || b.hp <= 0) continue;
+    // Check if x range overlaps with block
+    if (x + w > b.x + 2 && x < b.x + b.w - 2) {
+      if (b.y < surfY) surfY = b.y; // block top is higher (lower Y)
+    }
+  }
+  return surfY;
+}
+
 function updateBird() {
   if (!bird || gamePhase !== 'FLYING') return;
 
-  // Aerodynamics: gravity + air drag + wind
+  // Aerodynamics
   bird.vy += GRAVITY;
   bird.vx *= AIR_DRAG;
   bird.vy *= AIR_DRAG;
-  bird.vx += WIND_DRIFT;        // slight wind pushback
-  bird.va *= SPIN_DRAG;         // spin slows down
+  bird.vx += WIND_DRIFT;
 
   bird.x += bird.vx;
   bird.y += bird.vy;
-
-  // Rotation follows velocity direction (aerodynamic tilt)
   bird.angle = Math.atan2(bird.vy, bird.vx);
 
-  const groundY = H() - 60 - BIRD_R;
-  if (bird.y > groundY) {
-    bird.y = groundY;
+  // Ground
+  const gY = GROUND_Y() - BIRD_R;
+  if (bird.y > gY) {
+    bird.y = gY;
     bird.vy *= -BOUNCE_DAMPING;
     bird.vx *= GROUND_FRICTION;
     if (Math.abs(bird.vy) < 1) bird.vy = 0;
@@ -644,8 +683,8 @@ function updateBird() {
   if (bird.x < BIRD_R) { bird.x = BIRD_R; bird.vx *= -0.3; }
   if (bird.x > W() - BIRD_R) { bird.x = W() - BIRD_R; bird.vx *= -0.3; }
 
-  // Check if bird stopped or flew off screen
-  const stopped = Math.abs(bird.vx) < 0.2 && Math.abs(bird.vy) < 0.2 && bird.y >= groundY - 1;
+  // Stopped or off screen
+  const stopped = Math.abs(bird.vx) < 0.2 && Math.abs(bird.vy) < 0.2 && bird.y >= gY - 1;
   const offScreen = bird.x > W() + 50 || bird.y > H() + 50;
   if (stopped || offScreen) {
     gamePhase = 'SETTLING';
@@ -655,64 +694,69 @@ function updateBird() {
 
 function checkCollisions() {
   if (!bird || gamePhase !== 'FLYING') return;
+  let birdHit = false; // only one collision per frame
 
   // Bird vs blocks
-  blocks.forEach(b => {
-    if (rectCircleCollision(b, bird)) {
-      const speed = Math.sqrt(bird.vx*bird.vx + bird.vy*bird.vy);
-      // Minimum impact speed required to do damage
-      const damage = speed > 3 ? Math.ceil((speed - 2) / 4) : 0;
-      b.hp -= Math.max(damage, speed > 2 ? 1 : 0);
-      // Push block proportional to impact
-      const pushFactor = Math.min(speed / 10, 0.5);
-      b.vx = bird.vx * pushFactor;
-      b.vy = bird.vy * pushFactor * 0.7;
-      b.va = (Math.random() - 0.5) * 0.08;
-      // Bird loses most energy on impact
-      bird.vx *= -0.2;
-      bird.vy *= -0.2;
+  for (const b of blocks) {
+    if (birdHit) break;
+    if (b.hp <= 0) continue;
+    if (!rectCircleCollision(b, bird)) continue;
+    birdHit = true;
 
-      if (b.hp <= 0) {
-        levelScore += 50;
-        spawnDebris(b);
-      }
-    }
-  });
+    const speed = Math.sqrt(bird.vx*bird.vx + bird.vy*bird.vy);
+    const damage = speed > 3 ? Math.ceil((speed - 2) / 4) : (speed > 2 ? 1 : 0);
+    b.hp -= damage;
+    const pushFactor = Math.min(speed / 10, 0.5);
+    b.vx = (b.vx||0) + bird.vx * pushFactor;
+    b.vy = (b.vy||0) + bird.vy * pushFactor * 0.7;
+    b.va = (b.va||0) + (Math.random() - 0.5) * 0.08;
 
-  // Bird vs enemies — need real speed to damage
-  enemies.forEach(e => {
-    if (!e.alive) return;
-    const dx = bird.x - e.x, dy = bird.y - e.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist < BIRD_R + e.r) {
+    // Push bird OUT of block (resolve penetration)
+    const bcx = b.x + b.w/2, bcy = b.y + b.h/2;
+    const nx = bird.x - bcx, ny = bird.y - bcy;
+    const nd = Math.sqrt(nx*nx+ny*ny) || 1;
+    bird.x = bcx + (nx/nd) * (BIRD_R + Math.max(b.w,b.h)/2 + 2);
+    bird.y = bcy + (ny/nd) * (BIRD_R + Math.max(b.w,b.h)/2 + 2);
+    bird.vx *= -0.2;
+    bird.vy *= -0.2;
+
+    if (b.hp <= 0) { levelScore += 50; spawnDebris(b); }
+  }
+
+  // Bird vs enemies
+  if (!birdHit) {
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      const dx = bird.x - e.x, dy = bird.y - e.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist >= BIRD_R + e.r) continue;
+
       const speed = Math.sqrt(bird.vx*bird.vx + bird.vy*bird.vy);
       if (speed > 2.5) {
-        const dmg = Math.ceil((speed - 2) / 3);
-        e.hp -= dmg;
-        // Push enemy
-        e.vx = bird.vx * 0.3;
-        e.vy = bird.vy * 0.3;
+        e.hp -= Math.ceil((speed - 2) / 3);
+        e.vx = (e.vx||0) + bird.vx * 0.3;
+        e.vy = (e.vy||0) + bird.vy * 0.3;
         if (e.hp <= 0) {
           e.alive = false;
           levelScore += e.points;
           spawnParticles(e.x, e.y, '#FFD700');
         }
       }
-      // Bird loses energy regardless
       bird.vx *= 0.3;
       bird.vy *= 0.3;
       updateHUD();
+      break; // one enemy per frame
     }
-  });
+  }
 
-  // Blocks falling on enemies — only if block is moving fast enough
-  enemies.forEach(e => {
-    if (!e.alive) return;
-    blocks.forEach(b => {
-      if (b.hp <= 0) return;
-      const blockSpeed = Math.sqrt((b.vx||0)**2 + (b.vy||0)**2);
-      if (blockSpeed < 1.5) return; // block must be moving
-      if (e.x > b.x && e.x < b.x+b.w && e.y > b.y && e.y < b.y+b.h) {
+  // Block-on-enemy crush
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    for (const b of blocks) {
+      if (b.hp <= 0) continue;
+      const bSpeed = Math.sqrt((b.vx||0)**2 + (b.vy||0)**2);
+      if (bSpeed < 1.2) continue;
+      if (e.x > b.x && e.x < b.x+b.w && e.y > b.y-e.r && e.y < b.y+b.h+e.r) {
         e.hp -= 1;
         if (e.hp <= 0) {
           e.alive = false;
@@ -720,48 +764,80 @@ function checkCollisions() {
           spawnParticles(e.x, e.y, '#FF6600');
         }
         updateHUD();
+        break;
       }
-    });
-  });
+    }
+  }
 
-  // Remove dead blocks
   blocks = blocks.filter(b => b.hp > 0);
 }
 
-function rectCircleCollision(rect, circle) {
-  const cx = Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
-  const cy = Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
-  const dx = circle.x - cx, dy = circle.y - cy;
-  return (dx*dx + dy*dy) < (BIRD_R * BIRD_R);
-}
-
 function updateBlocks() {
+  const gY = GROUND_Y();
   blocks.forEach(b => {
-    if (Math.abs(b.vx) > 0.1 || Math.abs(b.vy) > 0.1) {
-      b.vy += GRAVITY * 0.5;
-      b.x += b.vx;
-      b.y += b.vy;
-      b.angle += b.va || 0;
-      b.vx *= BLOCK_FRICTION;
-      b.vy *= BLOCK_FRICTION;
+    // Apply gravity always (for stacking)
+    b.vy = (b.vy||0) + GRAVITY * 0.4;
+    b.vx = (b.vx||0) * BLOCK_FRICTION;
 
-      const groundY = H() - 60 - b.h;
-      if (b.y > groundY) {
-        b.y = groundY;
-        b.vy *= -0.2;
-        b.vx *= 0.5;
-        if (Math.abs(b.vy) < 0.5) b.vy = 0;
+    // Move
+    b.x += b.vx;
+    b.y += b.vy;
+    b.angle = (b.angle||0) + (b.va||0);
+    if (b.va) b.va *= 0.95;
+
+    // Ground collision
+    if (b.y + b.h > gY) {
+      b.y = gY - b.h;
+      b.vy = Math.abs(b.vy) > 1 ? -b.vy * 0.2 : 0;
+      b.vx *= 0.5;
+      b.va = (b.va||0) * 0.5;
+    }
+
+    // Block-on-block stacking
+    for (const other of blocks) {
+      if (other === b || other.hp <= 0) continue;
+      // Check overlap
+      if (b.x < other.x + other.w && b.x + b.w > other.x &&
+          b.y + b.h > other.y && b.y < other.y + other.h) {
+        // Resolve: push b upward (it fell onto other)
+        if (b.vy > 0 && b.y + b.h - other.y < 15) {
+          b.y = other.y - b.h;
+          if (Math.abs(b.vy) > 1.5) {
+            // Impact — damage both on hard collision
+            other.vx = (other.vx||0) + b.vx * 0.2;
+            other.vy = (other.vy||0) + b.vy * 0.1;
+          }
+          b.vy = 0;
+          b.vx *= 0.7;
+        }
       }
     }
+
+    // Clamp tiny velocities
+    if (Math.abs(b.vx) < 0.05) b.vx = 0;
+    if (Math.abs(b.vy) < 0.05) b.vy = 0;
   });
 
-  // Enemies gravity
+  // Enemy physics — gravity + block surface support
   enemies.forEach(e => {
     if (!e.alive) return;
-    e.vy = (e.vy || 0) + GRAVITY * 0.3;
+    e.vy = (e.vy || 0) + GRAVITY * 0.4;
+    e.x += (e.vx || 0);
     e.y += e.vy;
-    const groundY = H() - 60 - e.r;
-    if (e.y > groundY) { e.y = groundY; e.vy = 0; }
+    if (e.vx) e.vx *= 0.9;
+
+    // Check ground
+    if (e.y + e.r > gY) { e.y = gY - e.r; e.vy = 0; e.vx = 0; }
+
+    // Check block surfaces — stand on top of blocks
+    for (const b of blocks) {
+      if (b.hp <= 0) continue;
+      if (e.x > b.x && e.x < b.x + b.w &&
+          e.y + e.r > b.y && e.y + e.r < b.y + 12 && e.vy >= 0) {
+        e.y = b.y - e.r;
+        e.vy = 0;
+      }
+    }
   });
 }
 
