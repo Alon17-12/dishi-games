@@ -5,11 +5,22 @@ import {
   query, orderBy, limit, onSnapshot, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-// gameId: "flying-dishi" | "dishi-hangman" | "raspia-king" | "fireman-dishi"
+// Max plausible scores per game (anti-cheat sanity check)
+const MAX_SCORES = {
+  'flying-dishi': 500,
+  'dishi-hangman': 5000,
+  'candy-dishi': 15000,
+  'dishi-wordsearch': 10000,
+};
+
+// gameId: "flying-dishi" | "dishi-hangman" | "candy-dishi" | "dishi-wordsearch"
 // user: Firebase Auth user object
 // score: number
 export async function saveScore(gameId, user, score) {
   if (!user) return;
+  if (typeof score !== 'number' || score < 0 || !isFinite(score)) return;
+  const maxScore = MAX_SCORES[gameId] || 10000;
+  if (score > maxScore) return;
   const ref = doc(db, 'leaderboard', gameId, 'scores', user.uid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);

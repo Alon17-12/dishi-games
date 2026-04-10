@@ -87,6 +87,26 @@
       animation: overlay-pulse 0.42s ease infinite alternate;
     }
     #urgent-overlay.show { display: block; }
+
+    /* Space-to-start overlay */
+    #space-overlay {
+      position: fixed; inset: 0; z-index: 90;
+      background: rgba(20,0,40,0.82);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; pointer-events: all; cursor: pointer;
+    }
+    #space-overlay.hidden { display: none; }
+    #space-overlay .spc-title {
+      font-family: 'Fredoka One', cursive; font-size: 2rem; color: #fff;
+      text-shadow: 0 0 24px rgba(200,100,255,0.8);
+    }
+    #space-overlay .spc-hint {
+      font-family: 'Fredoka One', cursive; font-size: 1.25rem;
+      color: #ffd700; animation: spc-blink 1.1s ease-in-out infinite;
+    }
+    @keyframes spc-blink {
+      0%,100% { opacity: 1; } 50% { opacity: 0.35; }
+    }
     @keyframes overlay-pulse {
       from { background: transparent; }
       to   { background: rgba(255,0,0,0.06); }
@@ -162,7 +182,12 @@
 <body>
   <div id="urgent-overlay"></div>
   <div id="bonus-flash"></div>
+  <div id="space-overlay">
+    <div class="spc-title">🍬 קנדישי</div>
+    <div class="spc-hint">לחץ SPACE או הקש כאן להתחלה</div>
+  </div>
 
+  <audio id="bgMusic" src="../assets/קנדישי.wav" loop></audio>
   <h1>🍬 קנדישי</h1>
   <div id="hud">
     <div class="hud-box">
@@ -200,6 +225,7 @@
     { emoji: '🪣', color: '#3399ff', dark: '#1155cc', shine: '#88ccff', label: 'מגב'           },
     { emoji: '🍽️', color: '#ff33cc', dark: '#bb0099', shine: '#ff99ee', label: 'כלים מלוכלכים' },
   ];
+  const TILE_COUNT = TILES.length;
 
   // ─── Board state ──────────────────────────────────────────────────────────
   let board          = [];
@@ -209,6 +235,7 @@
   let cascadeLevel   = 0;
   let swapAnim       = null;
   let timeLeft       = GAME_DURATION;
+  let _waitingToStart = true;
   let score          = 0;
   let scorePopups    = [];
   let removeTimer    = 0;
@@ -223,7 +250,7 @@
       for (let c = 0; c < COLS; c++) {
         let type, attempts = 0;
         do {
-          type = Math.floor(Math.random() * TILES.length);
+          type = Math.floor(Math.random() * TILE_COUNT);
         } while (
           ++attempts < 100 && (
             (c >= 2 && board[r][c-1].type === type && board[r][c-2].type === type) ||
@@ -235,9 +262,10 @@
         board[r][c] = tile;
         const delay = (r * COLS + c) * 18;
         setTimeout(() => {
-          let elapsed = 0;
-          const anim = () => {
-            elapsed += 16;
+          let startTs = null;
+          const anim = (ts) => {
+            if (!startTs) startTs = ts;
+            const elapsed = ts - startTs;
             const p    = Math.min(1, elapsed / 280);
             const ease = p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p + 2, 3) / 2;
             tile.scale = ease;
@@ -284,7 +312,7 @@
   }
 
   function update(dt) {
-    if (gamePhase !== 'GAMEOVER') {
+    if (!_waitingToStart && gamePhase !== 'GAMEOVER') {
       timeLeft -= dt;
       const display  = Math.max(0, Math.ceil(timeLeft));
       const timerEl  = document.getElementById('timer-val');
@@ -480,6 +508,8 @@
     }
   }
 
+  const _olympicMode = new URLSearchParams(location.search).get('olympic') === '1';
+
   async function triggerGameOver() {
     if (gamePhase === 'GAMEOVER') return;
     gamePhase = 'GAMEOVER';
@@ -487,6 +517,13 @@
     document.getElementById('timer-val').classList.remove('urgent');
     document.getElementById('ov-score').textContent = `⭐ ${score} נקודות`;
     const saveEl = document.getElementById('save-status');
+
+    // Olympic mode: notify parent and hide the normal overlay
+    if (_olympicMode) {
+      window.parent.postMessage({ type: 'OLYMPIDISHI_SCORE', score }, '*');
+      return;
+    }
+
     saveEl.className = ''; saveEl.textContent = '⏳ שומר ניקוד...';
     document.getElementById('overlay').classList.add('show');
     try {
@@ -500,8 +537,9 @@
       }
       await saveScore('candy-dishi', auth.currentUser, score);
       const u = auth.currentUser;
+      const _e = s => { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; };
       saveEl.className = 'saved';
-      saveEl.innerHTML = `${u.photoURL ? `<img src="${u.photoURL}" alt="">` : ''}✅ שלום ${u.displayName}! ניקוד נשמר`;
+      saveEl.innerHTML = `${u.photoURL ? `<img src="${_e(u.photoURL)}" alt="">` : ''}✅ שלום ${_e(u.displayName)}! ניקוד נשמר`;
     } catch (e) { saveEl.textContent = ''; console.warn('Score not saved:', e); }
   }
 
@@ -521,8 +559,12 @@
     swapAnim       = null;
     removeTimer    = 0;
     pendingMatches = new Set();
+    _waitingToStart = true;
     document.getElementById('score-val').textContent = '0';
     document.getElementById('timer-val').textContent = GAME_DURATION;
+    document.getElementById('space-overlay').classList.remove('hidden');
+    const _bgm = document.getElementById('bgMusic');
+    if (_bgm) { _bgm.pause(); _bgm.currentTime = 0; }
     initBoard();
     render();
   }
@@ -603,6 +645,7 @@
 
   function startRemoving(matches) {
     removeTimer = REMOVE_DURATION;
+
     matches.forEach(key => {
       const [r, c] = key.split(',').map(Number);
       if (board[r][c]) board[r][c].removing = true;
@@ -613,9 +656,9 @@
     score += pts;
     document.getElementById('score-val').textContent = score;
 
-    // Time bonus: only for runs of 4+ or 5+ in a single row/column
+    // Time bonus: only for runs of 4+ or 5+
     const maxRun = maxRunLength(matches);
-    const bonus  = maxRun >= 5 ? 5 : maxRun >= 4 ? 2 : 0;
+    const bonus  = maxRun >= 5 ? 2 : maxRun >= 4 ? 1 : 0;
     if (bonus > 0) {
       timeLeft = Math.min(MAX_TIME, timeLeft + bonus);
       showBonusFlash(`+${bonus}s ⏱`);
@@ -648,7 +691,7 @@
           tile.alpha  = 1;
           board[r][c] = tile;
         } else {
-          const newTile = mkTile(Math.floor(Math.random() * TILES.length));
+          const newTile = mkTile(Math.floor(Math.random() * TILE_COUNT));
           newTile.y    = -(idx - existing.length + 1) * TILE_SIZE;
           board[r][c]  = newTile;
         }
@@ -698,6 +741,28 @@
 
   canvas.addEventListener('click',      handleTap);
   canvas.addEventListener('touchstart', handleTap, { passive: false });
+
+  // Space-to-start logic
+  const _spaceOverlay = document.getElementById('space-overlay');
+  function _startCandyGame() {
+    if (!_waitingToStart) return;
+    _waitingToStart = false;
+    _spaceOverlay.classList.add('hidden');
+    const _bgMusic = document.getElementById('bgMusic');
+    _bgMusic.volume = 0.35; _bgMusic.currentTime = 0; _bgMusic.play().catch(() => {});
+  }
+
+  if (_olympicMode) {
+    _startCandyGame();
+  } else {
+    window.addEventListener('keydown', function _spaceStart(e) {
+      if (e.code === 'Space' && _waitingToStart) {
+        e.preventDefault();
+        _startCandyGame();
+      }
+    });
+    _spaceOverlay.addEventListener('click', _startCandyGame);
+  }
 
   initBoard();
   requestAnimationFrame(gameLoop);

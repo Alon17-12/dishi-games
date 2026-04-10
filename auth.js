@@ -8,7 +8,6 @@ import {
 
 export let currentUser = null;
 
-// Call this once from lobby to wire up auth state changes
 export function initAuth(onUserChange) {
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
@@ -20,9 +19,7 @@ export async function signInWithGoogle() {
   try {
     await signInWithPopup(auth, googleProvider);
   } catch (e) {
-    if (e.code !== 'auth/popup-closed-by-user') {
-      console.error('Login error:', e);
-    }
+    return e; // return so caller can display it
   }
 }
 

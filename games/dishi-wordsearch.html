@@ -134,11 +134,35 @@
       border: 2px solid rgba(100,220,130,0.5);
       object-fit: cover;
     }
+
+    /* Space-to-start overlay */
+    #space-overlay {
+      position: fixed; inset: 0; z-index: 90;
+      background: rgba(5,2,18,0.85);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; pointer-events: all; cursor: pointer;
+    }
+    #space-overlay.hidden { display: none; }
+    #space-overlay .spc-title {
+      font-family: 'Fredoka One', cursive; font-size: 2rem; color: #fff;
+      text-shadow: 0 0 24px rgba(192,132,252,0.8);
+    }
+    #space-overlay .spc-hint {
+      font-family: 'Fredoka One', cursive; font-size: 1.25rem;
+      color: #ffd700; animation: spc-blink 1.1s ease-in-out infinite;
+    }
+    @keyframes spc-blink {
+      0%,100% { opacity: 1; } 50% { opacity: 0.35; }
+    }
   </style>
 </head>
 <body>
 
 <div id="urgent-overlay"></div>
+<div id="space-overlay">
+  <div class="spc-title">🔤 תשחץ דישי</div>
+  <div class="spc-hint">לחץ SPACE או הקש כאן להתחלה</div>
+</div>
 
 <h1>🔤 תשחץ דישי</h1>
 <div id="score-area">ניקוד: <span id="scoreDisplay">0</span></div>
@@ -147,6 +171,7 @@
   <span id="timerDisplay">60</span>
 </div>
 
+<audio id="bgMusic" src="../assets/אופקי_ואנכי.mp3" loop></audio>
 <canvas id="gridCanvas"></canvas>
 <div id="word-list"></div>
 
@@ -158,6 +183,8 @@
 </div>
 
 <script type="module">
+const _olympicMode = new URLSearchParams(location.search).get('olympic') === '1';
+
 async function trySaveScore(score) {
   const el = document.getElementById('save-status');
   el.className = ''; el.textContent = '⏳ שומר ניקוד...';
@@ -173,8 +200,9 @@ async function trySaveScore(score) {
     }
     await saveScore('dishi-wordsearch', auth.currentUser, score);
     const u = auth.currentUser;
+    const _e = s => { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; };
     el.className = 'saved';
-    el.innerHTML = `${u.photoURL ? `<img src="${u.photoURL}" alt="">` : ''}✅ שלום ${u.displayName}! ניקוד נשמר`;
+    el.innerHTML = `${u.photoURL ? `<img src="${_e(u.photoURL)}" alt="">` : ''}✅ שלום ${_e(u.displayName)}! ניקוד נשמר`;
   } catch (e) {
     el.textContent = '';
     console.warn('Score not saved:', e);
@@ -184,7 +212,6 @@ async function trySaveScore(score) {
 const GAME_DURATION = 60;
 const GRID_SIZE     = 11;
 const DIRECTIONS    = [
-  { dr: 0,  dc: 1  },  // LTR
   { dr: 0,  dc: -1 },  // RTL
   { dr: 1,  dc: 0  },  // down
   { dr: -1, dc: 0  },  // up
@@ -265,7 +292,8 @@ const WORD_BANK = [
   { word: 'כושר',     hint: 'צריך לשמור עליו'                       },
   { word: 'מדים',     hint: 'מה לובשים'                             },
   { word: 'מגפיים',   hint: 'נעלי הצבא'                             },
-  { word: 'כומתה',    hint: 'כיסוי ראש'                             },
+  { word: 'סודה',     hint: 'משקה מוגז'                             },
+  { word: 'טישו',     hint: 'נייר לניגוב'                          },
   { word: 'נשק',      hint: 'מה שמחזיקים בשמירה'                    },
   { word: 'מטווח',    hint: 'איפה מתרגלים ירי'                      },
   { word: 'סיור',     hint: 'יוצאים לבדוק'                          },
@@ -298,6 +326,17 @@ const WORD_BANK = [
   { word: 'חתירה',   hint: 'להגיע בכל מחיר'                         },
   { word: 'חביבי',   hint: 'מה שקוראים לחבר'                        },
   { word: 'מתיחה',   hint: 'כשמושכים את הרגל'                       },
+  { word: 'מגבונים',  hint: 'לנגב את הכל'                            },
+  { word: 'תדר',     hint: 'ערוץ התקשורת'                            },
+  { word: 'בינוי',   hint: 'עבודות ותשתיות'                          },
+  { word: 'אקסל',    hint: 'גיליון נתונים'                           },
+  { word: 'סיגריות', hint: 'עשן וניקוטין'                            },
+  { word: 'קפה',     hint: 'הדלק של הבסיס'                           },
+  { word: 'טישו',    hint: 'נייר רך ומועיל'                          },
+  { word: 'תורנים',  hint: 'תורנות יומית'                            },
+  { word: 'מטבח',    hint: 'איפה מכינים אוכל'                        },
+  { word: 'אקונומיקה', hint: 'חומר ניקיון'                           },
+  { word: 'שקיות',   hint: 'לאחסן ולהעביר'                           },
 ];
 
 // ── Highlight colours per found word (cycles) ─────────────────────────────
@@ -453,7 +492,12 @@ function checkSelection() {
       timeLeft = Math.min(timeLeft + 5, 120);
       updateTimerDisplay(false);
       markWordFound(p.word);
-      // Brief flash on cells
+
+      // All words found → stop timer and end game immediately
+      if (placements.every(pl => pl.found)) {
+        clearInterval(timerInterval);
+        setTimeout(endGame, 400);
+      }
       break;
     }
   }
@@ -569,11 +613,12 @@ function render() {
       const inSel = selCells.some(s => s.r === r && s.c === c);
 
       ctx.font      = `bold ${Math.round(CELL * 0.5)}px Fredoka One, cursive`;
-      ctx.fillStyle = inFound ? '#fff' : inSel ? '#ffd700' : 'rgba(240,224,208,0.75)';
-      ctx.shadowColor = inFound ? 'rgba(255,255,255,0.3)' : 'transparent';
-      ctx.shadowBlur  = inFound ? 4 : 0;
+      ctx.fillStyle = inFound ? '#fff' : inSel ? '#ffd700' : '#e8dcc8';
+      ctx.shadowColor = inFound ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur  = inFound ? 5 : 3;
+      ctx.shadowOffsetX = 0; ctx.shadowOffsetY = inFound ? 0 : 1;
       ctx.fillText(letter, cx, cy + 1);
-      ctx.shadowBlur = 0;
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     }
   }
 }
@@ -614,30 +659,40 @@ function endGame() {
 
   const foundList  = placements.filter(p => p.found);
   const total      = placements.length;
+  const allFound   = foundList.length === total;
   const missedList = placements.filter(p => !p.found).map(p => p.word);
+
+  // Perfect bonus: x2 score if all words found
+  if (allFound) score = score * 2;
 
   const statsEl = document.getElementById('result-stats');
   statsEl.innerHTML = `
     <div class="stat-line">✅ מצאת: <b>${foundList.length} מתוך ${total} מילים</b></div>
     ${missedList.length ? `<div class="stat-line" style="font-size:0.78rem;color:rgba(240,224,208,0.6);margin-top:4px">
       🔍 החמצת: ${missedList.join(' • ')}
-    </div>` : '<div class="stat-line">🏆 מצאת הכל!</div>'}
-    <div class="stat-final">⭐ ${score} נקודות</div>
+    </div>` : '<div class="stat-line">🏆 מצאת הכל! ×2 בונוס!</div>'}
+    <div class="stat-final">⭐ ${score} נקודות${allFound ? ' 🎯' : ''}</div>
   `;
 
   document.getElementById('result-title').textContent =
-    foundList.length === total ? '🏆 שלמות!' :
-    foundList.length >= total * 0.7 ? '🎉 כל הכבוד!' :
-    foundList.length >= total * 0.4 ? '👍 לא רע!' : '😅 אפשר יותר טוב';
+    allFound                         ? '🏆 שלמות מוחלטת!' :
+    foundList.length >= total * 0.7  ? '🎉 כל הכבוד!' :
+    foundList.length >= total * 0.4  ? '👍 לא רע!' : '😅 אפשר יותר טוב';
 
   document.getElementById('save-status').className = '';
   document.getElementById('save-status').textContent = '';
   document.getElementById('result').classList.add('show');
-  trySaveScore(score);
+  if (_olympicMode) {
+    window.parent.postMessage({ type: 'OLYMPIDISHI_SCORE', score }, '*');
+  } else {
+    trySaveScore(score);
+  }
 }
 
 // ── Start game ────────────────────────────────────────────────────────────────
-function startGame() {
+const _spaceOverlay = document.getElementById('space-overlay');
+
+function resetGame() {
   clearInterval(timerInterval);
   gameOver  = false;
   score     = 0;
@@ -654,7 +709,33 @@ function startGame() {
   buildGrid();
   buildWordList();
   render();
-  startTimer();
+}
+
+function startGame() {
+  resetGame();
+  if (_olympicMode) {
+    const _bgm = document.getElementById('bgMusic');
+    if (_bgm) { _bgm.volume = 0.35; _bgm.currentTime = 0; _bgm.play().catch(() => {}); }
+    startTimer();
+  } else {
+    _spaceOverlay.classList.remove('hidden');
+    let _started = false;
+    function _go() {
+      if (_started) return;
+      _started = true;
+      _spaceOverlay.classList.add('hidden');
+      window.removeEventListener('keydown', _handler);
+      _spaceOverlay.removeEventListener('click', _go);
+      const _bgm = document.getElementById('bgMusic');
+      if (_bgm) { _bgm.volume = 0.35; _bgm.currentTime = 0; _bgm.play().catch(() => {}); }
+      startTimer();
+    }
+    function _handler(e) {
+      if (e.code === 'Space') { e.preventDefault(); _go(); }
+    }
+    window.addEventListener('keydown', _handler);
+    _spaceOverlay.addEventListener('click', _go);
+  }
 }
 
 document.getElementById('result-btn').addEventListener('click', startGame);

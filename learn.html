@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הסבר — דישי גיימס</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    :root {
+      --bg:     #0a0a1a;
+      --card:   #13132a;
+      --border: #2a2a50;
+      --gold:   #f0c040;
+      --muted:  #8880a8;
+      --text:   #f0e8d0;
+    }
+
+    body {
+      background: radial-gradient(ellipse at center, #0d1a10 0%, var(--bg) 70%);
+      color: var(--text);
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px; padding: 24px;
+      direction: rtl;
+    }
+
+    /* ── Header ── */
+    .learn-header {
+      display: flex; align-items: center; gap: 14px;
+      text-align: center;
+    }
+    .learn-emoji { font-size: 3rem; line-height: 1; }
+    .learn-title {
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 900; color: var(--gold);
+      letter-spacing: -0.5px;
+    }
+
+    /* ── Body ── */
+    .learn-body {
+      display: flex; gap: 24px; align-items: flex-start;
+      width: 100%; max-width: 860px;
+    }
+    @media (max-width: 640px) {
+      .learn-body { flex-direction: column; }
+    }
+
+    .learn-video-wrap {
+      flex: 0 0 auto;
+      border-radius: 16px; overflow: hidden;
+      border: 2px solid rgba(240,192,64,0.4);
+      box-shadow: 0 0 40px rgba(240,192,64,0.2), 0 8px 32px rgba(0,0,0,0.6);
+    }
+    #learn-video {
+      display: block; width: 360px; max-width: 44vw; height: auto;
+    }
+    @media (max-width: 640px) {
+      #learn-video { width: 100%; max-width: 100%; }
+    }
+
+    .learn-text-wrap {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 26px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .learn-text-label {
+      font-size: .85rem; color: var(--muted); font-weight: 600; letter-spacing: .5px;
+    }
+    .learn-howto {
+      font-size: clamp(1rem, 2.2vw, 1.22rem);
+      font-weight: 600; line-height: 1.85;
+      color: var(--text);
+    }
+
+    /* ── Start button ── */
+    .learn-start-btn {
+      margin-top: 6px;
+      background: linear-gradient(135deg, #f0c040, #d09020);
+      color: #000; border: none;
+      padding: 16px 48px; border-radius: 14px;
+      font-family: inherit; font-size: 1.2rem; font-weight: 900;
+      cursor: pointer; letter-spacing: .5px;
+      box-shadow: 0 4px 20px rgba(240,192,64,0.35);
+      transition: transform .15s, filter .15s;
+      animation: btn-pulse 1.3s ease-in-out infinite alternate;
+    }
+    .learn-start-btn:hover { transform: translateY(-3px) scale(1.04); filter: brightness(1.1); }
+    @keyframes btn-pulse {
+      from { box-shadow: 0 4px 20px rgba(240,192,64,0.3); }
+      to   { box-shadow: 0 4px 36px rgba(240,192,64,0.65); }
+    }
+
+    .learn-space-hint {
+      font-size: .85rem; color: var(--muted); margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<audio id="bgMusic" loop></audio>
+
+<div class="learn-header">
+  <span class="learn-emoji" id="learn-emoji"></span>
+  <span class="learn-title"  id="learn-title"></span>
+</div>
+
+<div class="learn-body">
+  <div class="learn-video-wrap">
+    <video id="learn-video" autoplay muted loop playsinline></video>
+  </div>
+  <div class="learn-text-wrap">
+    <div class="learn-text-label">🎮 איך משחקים?</div>
+    <div class="learn-howto" id="learn-howto"></div>
+    <button class="learn-start-btn" id="start-btn">▶ התחל לשחק!</button>
+    <div class="learn-space-hint">או לחץ SPACE</div>
+  </div>
+</div>
+
+<script>
+const GAMES = {
+  'flying-dishi': {
+    name:  'דישי המעופף', emoji: '🚀',
+    file:  'games/flying-dishi.html',
+    video: 'assets/למידה פלאפי דישי.mp4',
+    music: 'assets/דישי נינג׳ה.mp3',
+    howTo: 'לחץ SPACE כדי שדישי יטוס למעלה! הימנע מהמכשולים. כל 10 נקודות מקבלים בונוס קולי מיוחד.',
+  },
+  'candy-dishi': {
+    name:  'קנדישי', emoji: '🍬',
+    file:  'games/candy-dishi.html',
+    video: 'assets/למידה קנדישי.mp4',
+    music: 'assets/קנדישי.wav',
+    howTo: 'לחץ על ממתק ואז על ממתק שכן — שורה של 3 ואחר נעלמת! שורה ארוכה יותר = ניקוד וזמן בונוס.',
+  },
+  'dishi-hangman': {
+    name:  'דיש תלוי', emoji: '🎭',
+    file:  'games/dishi-hangman.html',
+    video: 'assets/למידה דיש תלוי.mp4',
+    music: 'assets/דישי השומר של כל העם.mp3',
+    howTo: 'לחץ על אותיות כדי לנחש את המילה הנסתרת. יש 9 טעויות מותרות — כל טעות מציירת חלק מדישי התלוי!',
+  },
+  'dishi-wordsearch': {
+    name:  'תשחץ דישי', emoji: '🔤',
+    file:  'games/dishi-wordsearch.html',
+    video: 'assets/למידה תשחץ דישי.mp4',
+    music: 'assets/אופקי_ואנכי.mp3',
+    howTo: 'מצא מילות נסתרות ברשת! לחץ על האות הראשונה ואז על האחרונה. מצאת את כולן? מקבל ניקוד כפול!',
+  },
+};
+
+const params      = new URLSearchParams(location.search);
+const gameId      = params.get('game');
+const olympicMode = params.get('olympic') === '1';
+const seed        = params.get('seed') || '0';
+const game        = GAMES[gameId];
+
+if (!game) {
+  if (gameId) {
+    location.replace('games/' + encodeURIComponent(gameId) + '.html');
+  } else {
+    location.replace('index.html');
+  }
+} else {
+  document.getElementById('learn-emoji').textContent = game.emoji;
+  document.getElementById('learn-title').textContent = game.name;
+  document.getElementById('learn-howto').textContent = game.howTo;
+
+  const vid = document.getElementById('learn-video');
+  vid.src = game.video;
+  vid.load();
+  vid.play().catch(() => {});
+
+  const bgm = document.getElementById('bgMusic');
+  bgm.src    = game.music;
+  bgm.volume = 0.38;
+  bgm.play().catch(() => {});
+
+  let _started = false;
+  function startGame() {
+    if (_started) return;
+    _started = true;
+    bgm.pause();
+    const dest = olympicMode
+      ? `${game.file}?olympic=1&seed=${seed}`
+      : game.file;
+    location.href = dest;
+  }
+
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); startGame(); }
+  });
+}
+</script>
+</body>
+</html>

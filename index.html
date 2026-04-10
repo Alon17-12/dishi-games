@@ -216,6 +216,103 @@
       font-family:'Nunito',sans-serif; transition:all 0.2s;
     }
     .signout-btn:hover { border-color:var(--p1); color:var(--p1); }
+    .user-pill { cursor:pointer; }
+    .user-pill:hover { border-color:var(--p3); }
+
+    /* ── Exit confirmation modal ── */
+    #exitModal {
+      display:none; position:fixed; inset:0; z-index:300;
+      background:rgba(0,0,0,0.82); backdrop-filter:blur(12px);
+      align-items:center; justify-content:center; padding:20px;
+    }
+    #exitModal.open { display:flex; }
+    .exit-card {
+      background:linear-gradient(160deg,#1a0608 0%,#0d0a00 100%);
+      border:2px solid rgba(220,60,60,0.45);
+      border-radius:24px; padding:32px 28px 28px;
+      width:100%; max-width:380px; text-align:center;
+      box-shadow:0 24px 60px rgba(0,0,0,0.7), 0 0 40px rgba(220,60,60,0.15);
+      display:flex; flex-direction:column; align-items:center; gap:14px;
+    }
+    .exit-icon { font-size:3rem; }
+    .exit-title { font-size:1.4rem; font-weight:900; color:#f87171; }
+    .exit-msg { font-size:.95rem; color:rgba(240,224,208,0.75); line-height:1.6; }
+    .exit-actions { display:flex; gap:12px; margin-top:6px; width:100%; }
+    .exit-actions button {
+      flex:1; padding:13px 0; border:none; border-radius:12px;
+      font-family:inherit; font-size:1rem; font-weight:700; cursor:pointer;
+      transition:filter .15s, transform .15s;
+    }
+    .exit-actions button:hover { filter:brightness(1.15); transform:translateY(-2px); }
+    .btn-exit-confirm {
+      background:linear-gradient(135deg,#dc2626,#991b1b); color:#fff;
+    }
+    .btn-exit-cancel {
+      background:linear-gradient(135deg,#166534,#14532d); color:#fff;
+    }
+
+    /* ── Profile modal ── */
+    #profileModal {
+      display:none; position:fixed; inset:0; z-index:200;
+      background:rgba(0,0,0,0.7); backdrop-filter:blur(10px);
+      align-items:center; justify-content:center; padding:16px;
+    }
+    #profileModal.open { display:flex; }
+    .profile-card {
+      background:linear-gradient(160deg,#1a0d2e 0%,#0d0820 100%);
+      border:1.5px solid rgba(192,132,252,0.3);
+      border-radius:24px; padding:28px 24px 24px;
+      width:100%; max-width:400px; position:relative;
+      box-shadow:0 24px 60px rgba(0,0,0,0.6), 0 0 40px rgba(192,132,252,0.1);
+    }
+    .profile-close {
+      position:absolute; top:14px; left:14px;
+      background:rgba(255,255,255,0.08); border:none; color:var(--text);
+      width:32px; height:32px; border-radius:50%; font-size:1rem;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:background 0.2s;
+    }
+    .profile-close:hover { background:rgba(255,255,255,0.16); }
+    .profile-header {
+      display:flex; flex-direction:column; align-items:center; gap:10px;
+      margin-bottom:22px;
+    }
+    .profile-avatar {
+      width:72px; height:72px; border-radius:50%;
+      border:3px solid var(--p3); object-fit:cover;
+      box-shadow:0 0 20px rgba(192,132,252,0.4);
+    }
+    .profile-avatar-ph {
+      width:72px; height:72px; border-radius:50%;
+      background:var(--card2); border:3px solid var(--p3);
+      display:flex; align-items:center; justify-content:center; font-size:2rem;
+    }
+    .profile-name {
+      font-family:'Fredoka',sans-serif; font-size:1.4rem; font-weight:700;
+      background:var(--grad); -webkit-background-clip:text; background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+    .pb-grid {
+      display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;
+    }
+    .pb-card {
+      background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px; padding:12px; text-align:center;
+    }
+    .pb-icon { font-size:1.5rem; margin-bottom:3px; }
+    .pb-game { font-size:0.7rem; color:var(--muted); margin-bottom:4px; }
+    .pb-score {
+      font-family:'Fredoka',sans-serif; font-size:1.3rem; font-weight:700;
+      color:var(--gold);
+    }
+    .pb-score.empty { color:var(--muted); font-size:0.95rem; }
+    .profile-signout {
+      width:100%; padding:11px; border-radius:12px;
+      background:rgba(255,107,157,0.12); border:1px solid rgba(255,107,157,0.3);
+      color:var(--p1); font-family:'Nunito',sans-serif; font-size:0.9rem;
+      font-weight:700; cursor:pointer; transition:all 0.2s;
+    }
+    .profile-signout:hover { background:rgba(255,107,157,0.22); }
 
     /* ══════════════════════════════════
        GAMES SECTION
@@ -259,6 +356,49 @@
     .card-hangman { --card-glow: 0 0 20px rgba(0,245,255,0.15); }
     .card-candy   { --card-glow: 0 0 20px rgba(255,107,157,0.2); }
     .card-words   { --card-glow: 0 0 20px rgba(100,220,255,0.2); }
+
+    /* ── Olympic button ── */
+    .olympic-btn {
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      width: 100%; margin-top: 18px;
+      background: linear-gradient(135deg, #1a0d2e 0%, #2d1060 50%, #1a0d2e 100%);
+      border: 2px solid #f0c040;
+      border-radius: var(--r);
+      padding: 18px 20px;
+      cursor: pointer;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 24px rgba(240,192,64,0.25), 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .olympic-btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(240,192,64,0.08), rgba(192,132,252,0.08));
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .olympic-btn:hover { transform: translateY(-3px); box-shadow: 0 0 40px rgba(240,192,64,0.4), 0 12px 40px rgba(0,0,0,0.5); }
+    .olympic-btn:hover::before { opacity: 1; }
+    .olympic-icon { font-size: 2.4rem; line-height: 1; }
+    .olympic-text { text-align: right; }
+    .olympic-title {
+      font-family: 'Fredoka', sans-serif; font-size: 1.3rem; font-weight: 700;
+      background: linear-gradient(135deg, #f0c040, #e080ff);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 0.5px;
+    }
+    .olympic-sub { font-size: 0.78rem; color: rgba(240,192,64,0.6); margin-top: 2px; }
+    @keyframes gold-shimmer {
+      0%   { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    .olympic-btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%);
+      background-size: 200% 100%;
+      animation: gold-shimmer 3s linear infinite;
+    }
 
     .card-icon { font-size:2.6rem; display:block; margin-bottom:10px; }
     .card-name {
@@ -500,6 +640,7 @@
         <div class="quote-dots" id="quoteDots"></div>
       </div>
 
+      <div id="authDebug" style="font-size:0.72rem;color:#aaa;text-align:center;margin-bottom:4px">⏳ בודק חיבור...</div>
       <div class="auth-area" id="authArea">
         <button class="google-btn" onclick="handleAuth()">
           <svg width="18" height="18" viewBox="0 0 18 18">
@@ -517,6 +658,17 @@
   <!-- ══ GAMES SECTION ══ -->
   <div class="section" id="sec-games">
     <div class="sec-title">🕹 בחר משחק</div>
+
+    <!-- Olympic button -->
+    <div class="olympic-btn" onclick="openOlympic()">
+      <div class="olympic-text">
+        <div class="olympic-title">🏅 האולימפידישי</div>
+        <div class="olympic-sub">4 משחקים · כל שחקן בתורו · הניקוד מצטבר</div>
+      </div>
+      <div class="olympic-icon">🎮</div>
+    </div>
+
+    <div class="sec-title" style="font-size:1.1rem;padding:18px 0 10px;opacity:0.7">או שחק לבד:</div>
     <div class="games-grid">
       <div class="game-card card-flappy" onclick="openGame('flying-dishi','דישי המעופף')">
         <span class="card-icon">🚀</span>
@@ -567,7 +719,7 @@
     <button class="close-btn" onclick="closeGame()">← חזרה</button>
     <span class="overlay-title" id="overlayTitle"></span>
   </div>
-  <iframe id="gameFrame" allowfullscreen></iframe>
+  <iframe id="gameFrame" allowfullscreen allow="autoplay"></iframe>
 </div>
 
 <!-- ══ BOTTOM NAV ══ -->
@@ -638,6 +790,15 @@ function nextQuote() {
 initDots();
 setInterval(nextQuote, 4000);
 
+/* ── Pause confetti when tab hidden ── */
+document.addEventListener('visibilitychange', () => {
+  const wrap = document.getElementById('confettiWrap');
+  wrap.style.animationPlayState = document.hidden ? 'paused' : 'running';
+  wrap.querySelectorAll('.c').forEach(c => {
+    c.style.animationPlayState = document.hidden ? 'paused' : 'running';
+  });
+});
+
 /* ── Section navigation ── */
 window.showSection = (name, btn) => {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -649,31 +810,115 @@ window.showSection = (name, btn) => {
 /* ── Game overlay ── */
 window.openGame = (id, title) => {
   document.getElementById('overlayTitle').textContent = title || '';
-  document.getElementById('gameFrame').src = `games/${id}.html`;
+  document.getElementById('gameFrame').src = `learn.html?game=${encodeURIComponent(id)}`;
   document.getElementById('gameOverlay').classList.add('open');
 };
+let _closeTimeout = null;
+
 window.closeGame = () => {
+  const frame = document.getElementById('gameFrame');
+  // Ask iframe if tournament is active via postMessage
+  frame.contentWindow.postMessage({ type: 'REQUEST_CLOSE' }, '*');
+  // Fallback: if no response in 250ms, close directly (non-olympic game)
+  _closeTimeout = setTimeout(() => {
+    document.getElementById('gameOverlay').classList.remove('open');
+    frame.src = '';
+  }, 250);
+};
+
+window.addEventListener('message', e => {
+  if (e.data?.type === 'TOURNAMENT_ACTIVE') {
+    clearTimeout(_closeTimeout);
+    document.getElementById('exitModal').classList.add('open');
+  } else if (e.data?.type === 'CLOSE_OK') {
+    clearTimeout(_closeTimeout);
+    document.getElementById('gameOverlay').classList.remove('open');
+    document.getElementById('gameFrame').src = '';
+  }
+});
+
+window.confirmExit = () => {
+  document.getElementById('exitModal').classList.remove('open');
   document.getElementById('gameOverlay').classList.remove('open');
   document.getElementById('gameFrame').src = '';
 };
+
+window.cancelExit = () => {
+  document.getElementById('exitModal').classList.remove('open');
+};
+
+/* ── Olympic ── */
+window.openOlympic = () => {
+  document.getElementById('overlayTitle').textContent = '🏅 האולימפידישי';
+  document.getElementById('gameFrame').src = 'preshow.html';
+  document.getElementById('gameOverlay').classList.add('open');
+};
 </script>
+
+<!-- ── Exit confirmation modal ── -->
+<div id="exitModal">
+  <div class="exit-card">
+    <div class="exit-icon">⚠️</div>
+    <div class="exit-title">יציאה מהאולימפידישי</div>
+    <div class="exit-msg">הטורניר בעיצומו!<br>יציאה תמחק את כל הנתונים ותאפס את המשחק.</div>
+    <div class="exit-actions">
+      <button class="btn-exit-confirm" onclick="confirmExit()">יציאה בכל זאת</button>
+      <button class="btn-exit-cancel"  onclick="cancelExit()">המשך לשחק ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Profile modal ── -->
+<div id="profileModal">
+  <div class="profile-card">
+    <button class="profile-close" onclick="closeProfile()">✕</button>
+    <div class="profile-header">
+      <div id="profileAvatarWrap"></div>
+      <div class="profile-name" id="profileName"></div>
+    </div>
+    <div class="pb-grid" id="pbGrid">
+      <div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:12px">⏳ טוען שיאים...</div>
+    </div>
+    <button class="profile-signout" onclick="handleAuth()">🚪 התנתקות</button>
+  </div>
+</div>
 
 <script type="module">
 import { initAuth, signInWithGoogle, signOutUser } from './auth.js';
 import { subscribeTopScores } from './leaderboard.js';
+import { db } from './firebase-config.js';
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
 
 let lbUnsub = null;
+
+const GAMES = [
+  { id:'flying-dishi',    icon:'🚀', name:'דישי המעופף' },
+  { id:'dishi-hangman',   icon:'🔤', name:'דיש תלוי'    },
+  { id:'candy-dishi',     icon:'🍬', name:'קנדישי'       },
+  { id:'dishi-wordsearch',icon:'🔍', name:'תשחץ דישי'   },
+];
 
 /* ── Auth ── */
 initAuth((user) => {
   window._currentUser = user;
+  const dbg = document.getElementById('authDebug');
+  if (dbg) dbg.remove();
   const area = document.getElementById('authArea');
   if (user) {
+    const avatar = user.photoURL
+      ? `<img src="${user.photoURL}" alt="" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--p3);object-fit:cover">`
+      : `<span style="font-size:1.3rem">👤</span>`;
     area.innerHTML = `
-      <div class="user-pill">
-        <img src="${user.photoURL||''}" alt="">
-        <span>${user.displayName}</span>
-        <button class="signout-btn" onclick="handleAuth()">יציאה</button>
+      <div class="user-pill" onclick="openProfile()">
+        ${avatar}
+        <span>${esc(user.displayName)}</span>
+        <span style="font-size:0.75rem;color:var(--muted)">▼</span>
       </div>`;
   } else {
     area.innerHTML = `
@@ -690,9 +935,59 @@ initAuth((user) => {
 });
 
 window.handleAuth = async () => {
-  if (window._currentUser) await signOutUser();
-  else await signInWithGoogle();
+  if (window._currentUser) { window.closeProfile(); await signOutUser(); return; }
+  const err = await signInWithGoogle();
+  if (err) {
+    const area = document.getElementById('authArea');
+    area.insertAdjacentHTML('afterend',
+      `<div style="color:#ff6b6b;font-size:0.78rem;text-align:center;margin-top:6px">
+        שגיאה: ${err.code}<br><small>פתח את Console (F12) לפרטים נוספים</small>
+       </div>`);
+  }
 };
+
+/* ── Profile modal ── */
+window.openProfile = async () => {
+  const user = window._currentUser;
+  if (!user) return;
+  const modal = document.getElementById('profileModal');
+
+  // Avatar + name
+  document.getElementById('profileAvatarWrap').innerHTML = user.photoURL
+    ? `<img class="profile-avatar" src="${user.photoURL}" alt="">`
+    : `<div class="profile-avatar-ph">👤</div>`;
+  document.getElementById('profileName').textContent = user.displayName || 'שחקן';
+
+  modal.classList.add('open');
+
+  // Fetch personal bests
+  const grid = document.getElementById('pbGrid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:12px">⏳ טוען שיאים...</div>';
+
+  const results = await Promise.all(
+    GAMES.map(g => getDoc(doc(db, 'leaderboard', g.id, 'scores', user.uid)))
+  );
+
+  grid.innerHTML = GAMES.map((g, i) => {
+    const data  = results[i].exists() ? results[i].data() : null;
+    const score = data ? data.score : null;
+    return `
+      <div class="pb-card">
+        <div class="pb-icon">${g.icon}</div>
+        <div class="pb-game">${g.name}</div>
+        <div class="pb-score${score === null ? ' empty' : ''}">${score !== null ? score : 'טרם שיחקת'}</div>
+      </div>`;
+  }).join('');
+};
+
+window.closeProfile = () => {
+  document.getElementById('profileModal').classList.remove('open');
+};
+
+// Close on backdrop click
+document.getElementById('profileModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) window.closeProfile();
+});
 
 /* ── Leaderboard ── */
 window.switchLbTab = (gameId, btn) => {
@@ -719,12 +1014,25 @@ function renderLeaderboard(scores) {
     return;
   }
 
-  /* podium: order 2nd, 1st, 3rd */
+  /* podium: order 2nd, 1st, 3rd (only when 3 exist) */
   const top3 = scores.slice(0,3);
-  const order = [top3[1], top3[0], top3[2]].filter(Boolean);
-  const rankClass = ['rank-2','rank-1','rank-3'];
-  const crowns    = ['🥈','🥇','🥉'];
-  const rankLabel = ['2ND','1ST','3RD'];
+  let order, rankClass, crowns, rankLabel;
+  if (top3.length >= 3) {
+    order     = [top3[1], top3[0], top3[2]];
+    rankClass = ['rank-2','rank-1','rank-3'];
+    crowns    = ['🥈','🥇','🥉'];
+    rankLabel = ['2ND','1ST','3RD'];
+  } else if (top3.length === 2) {
+    order     = [top3[1], top3[0]];
+    rankClass = ['rank-2','rank-1'];
+    crowns    = ['🥈','🥇'];
+    rankLabel = ['2ND','1ST'];
+  } else {
+    order     = [top3[0]];
+    rankClass = ['rank-1'];
+    crowns    = ['🥇'];
+    rankLabel = ['1ST'];
+  }
 
   podium.innerHTML = order.map((s,i) => {
     const realRank = order.indexOf(s) === 1 ? 0 : order.indexOf(s) === 0 ? 1 : 2;
@@ -732,13 +1040,13 @@ function renderLeaderboard(scores) {
     const cr  = crowns[i];
     const rl  = rankLabel[i];
     const ph  = s.photoURL
-      ? `<img class="pod-photo" src="${s.photoURL}" alt="">`
+      ? `<img class="pod-photo" src="${esc(s.photoURL)}" alt="">`
       : `<div class="pod-photo-ph">🎮</div>`;
     return `
       <div class="podium-slot ${rc}">
         <span class="pod-crown">${cr}</span>
         ${ph}
-        <div class="pod-name">${s.name}</div>
+        <div class="pod-name">${esc(s.name)}</div>
         <div class="pod-score">${s.score}</div>
         <div class="pod-base">${rl}</div>
       </div>`;
@@ -750,13 +1058,13 @@ function renderLeaderboard(scores) {
 
   rest.innerHTML = remaining.map((s,i) => {
     const ph = s.photoURL
-      ? `<img class="row-avatar" src="${s.photoURL}" alt="">`
+      ? `<img class="row-avatar" src="${esc(s.photoURL)}" alt="">`
       : `<div class="row-avatar-ph">🎮</div>`;
     return `
       <div class="lb-row" style="animation-delay:${i*40}ms">
         <span class="row-rank">${i+4}</span>
         ${ph}
-        <span class="row-name">${s.name}</span>
+        <span class="row-name">${esc(s.name)}</span>
         <span class="row-score">${s.score}</span>
       </div>`;
   }).join('');

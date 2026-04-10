@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏅 האולימפידישי</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    :root {
+      --bg:     #0a0a1a;
+      --card:   #13132a;
+      --border: #2a2a50;
+      --gold:   #f0c040;
+      --silver: #c0c8d8;
+      --bronze: #d09050;
+      --red:    #e04040;
+      --green:  #40c080;
+      --purple: #7060d0;
+      --text:   #f0e8d0;
+      --muted:  #8880a8;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      direction: rtl;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── SCREENS ── */
+    .screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .35s ease;
+      overflow-y: auto;
+    }
+    .screen.active { opacity: 1; pointer-events: all; }
+
+    /* ── SHARED COMPONENTS ── */
+    .title-big {
+      font-size: clamp(2rem, 7vw, 4rem);
+      font-weight: 900;
+      text-align: center;
+      letter-spacing: -1px;
+    }
+    .subtitle {
+      font-size: clamp(.9rem, 2.5vw, 1.2rem);
+      color: var(--muted);
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .btn {
+      border: none; cursor: pointer;
+      font-family: inherit; font-weight: 700;
+      border-radius: 12px;
+      transition: transform .15s, filter .15s;
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.15); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #7060d0, #4040a0);
+      color: #fff;
+      padding: 14px 36px;
+      font-size: 1.1rem;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, #f0c040, #d09020);
+      color: #000;
+      padding: 14px 36px;
+      font-size: 1.1rem;
+    }
+    .btn-sm {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 20px;
+      font-size: .85rem;
+    }
+    .btn-red {
+      background: var(--red);
+      color: #fff;
+      padding: 8px 14px;
+      font-size: .85rem;
+    }
+
+    /* ── SCREEN 1: REGISTRATION ── */
+    #screen-reg .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%; max-width: 480px;
+      margin-top: 24px;
+    }
+    .reg-logo { font-size: 4rem; text-align: center; }
+    .reg-input-row {
+      display: flex; gap: 10px;
+      margin: 20px 0 16px;
+    }
+    .reg-input-row input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      padding: 10px 14px;
+      direction: rtl;
+      outline: none;
+    }
+    .reg-input-row input:focus { border-color: var(--purple); }
+    #player-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    #player-list li {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 1rem;
+    }
+    #player-list li .pnum {
+      width: 26px; height: 26px;
+      background: var(--purple);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 700; color: #fff;
+    }
+    .start-area { margin-top: 24px; text-align: center; }
+    .start-hint { font-size: .85rem; color: var(--muted); margin-bottom: 12px; }
+
+    /* ── Game preview strip ── */
+    #game-previews {
+      display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; justify-content: center;
+    }
+    .gp-card {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      width: 90px;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      cursor: default;
+    }
+    .gp-card:hover {
+      transform: translateY(-4px) scale(1.06);
+      border-color: var(--gold);
+      box-shadow: 0 0 18px rgba(240,192,64,0.25);
+    }
+    .gp-emoji { font-size: 2.2rem; line-height: 1; }
+    .gp-name  { font-size: .72rem; color: var(--muted); text-align: center; font-weight: 600; }
+
+    /* ── Video preview popup ── */
+    #vid-popup {
+      position: fixed; z-index: 999;
+      width: 270px; border-radius: 14px; overflow: hidden;
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 32px rgba(240,192,64,0.45), 0 8px 40px rgba(0,0,0,0.7);
+      pointer-events: none;
+      opacity: 0; transform: scale(0.88) translateY(6px);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    #vid-popup.show { opacity: 1; transform: scale(1) translateY(0); }
+    #vid-popup video { width: 100%; display: block; }
+    #vid-popup-label {
+      padding: 7px 12px; font-weight: 700;
+      color: var(--gold); font-size: .85rem; text-align: center;
+      background: var(--card);
+    }
+
+    /* ── SCREEN 2: BRIEFING ── */
+    #screen-briefing {
+      background: radial-gradient(ellipse at center, #1a1040 0%, var(--bg) 70%);
+    }
+    .briefing-player {
+      font-size: clamp(2.5rem, 10vw, 5rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, #f0c040, #e080ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+    }
+    .briefing-game-emoji { font-size: 5rem; margin: 16px 0 8px; }
+    .briefing-game-name {
+      font-size: 1.6rem; font-weight: 700;
+      color: var(--text);
+    }
+    .briefing-meta {
+      font-size: .95rem; color: var(--muted);
+      margin-top: 6px;
+    }
+    .briefing-space-hint {
+      margin-top: 36px;
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--gold);
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      padding: 12px 32px;
+      animation: hint-pulse 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes hint-pulse {
+      from { opacity: 0.6; transform: scale(1); }
+      to   { opacity: 1;   transform: scale(1.04); }
+    }
+
+    /* ── SCREEN: LEARN ── */
+    #screen-learn {
+      background: radial-gradient(ellipse at center, #0d1a10 0%, var(--bg) 70%);
+      gap: 18px;
+    }
+    .learn-header {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .learn-header-emoji { font-size: 3rem; line-height: 1; }
+    .learn-header-title {
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-weight: 900; color: var(--gold);
+    }
+    .learn-body {
+      display: flex; gap: 24px; align-items: flex-start;
+      width: 100%; max-width: 860px;
+    }
+    @media (max-width: 640px) { .learn-body { flex-direction: column; } }
+    .learn-video-wrap {
+      flex: 0 0 auto;
+      border-radius: 14px; overflow: hidden;
+      border: 2px solid rgba(240,192,64,0.35);
+      box-shadow: 0 0 32px rgba(240,192,64,0.2);
+    }
+    #learn-video {
+      display: block; width: 340px; max-width: 42vw; height: auto;
+    }
+    @media (max-width: 640px) { #learn-video { width: 100%; max-width: 100%; } }
+    .learn-text-wrap {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .learn-text-label {
+      font-size: .85rem; color: var(--muted); font-weight: 600;
+    }
+    .learn-howto {
+      font-size: clamp(1rem, 2.2vw, 1.2rem);
+      font-weight: 600; line-height: 1.8;
+      color: var(--text);
+    }
+    .learn-player-line {
+      font-size: 1rem; color: var(--muted);
+    }
+    .learn-player-line strong { color: var(--gold); font-size: 1.2rem; }
+
+    /* ── SCREEN 3: PLAYING ── */
+    #screen-playing {
+      padding: 0;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      background: #000;
+      overflow: hidden;
+    }
+    #playing-header {
+      width: 100%;
+      background: rgba(0,0,0,.85);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+    #playing-header .ph-player {
+      font-weight: 700; font-size: 1rem;
+      color: var(--gold);
+    }
+    #playing-header .ph-game {
+      font-size: .9rem; color: var(--muted);
+    }
+    #playing-header .ph-attempt {
+      font-size: .9rem; color: var(--silver);
+      background: rgba(255,255,255,.08);
+      padding: 4px 12px; border-radius: 20px;
+    }
+    #playing-body {
+      flex: 1; min-height: 0; display: flex; overflow: hidden;
+    }
+    #game-frame {
+      flex: 1;
+      height: 100%;
+      border: none;
+    }
+    #live-scores {
+      width: 160px; flex-shrink: 0;
+      background: rgba(10,10,26,.95);
+      border-right: 1px solid var(--border);
+      padding: 12px 10px;
+      overflow-y: auto;
+      direction: rtl;
+    }
+    #live-scores h4 {
+      font-size: .75rem; letter-spacing: 1px; color: var(--muted);
+      text-align: center; margin-bottom: 8px;
+      border-bottom: 1px solid var(--border); padding-bottom: 6px;
+    }
+    .ls-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+      font-size: .82rem;
+    }
+    .ls-row.current { background: rgba(112,96,208,.18); border-radius: 6px; padding: 5px 4px; }
+    .ls-rank { color: var(--gold); font-weight: 700; min-width: 16px; font-size: .75rem; }
+    .ls-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c8d0e8; }
+    .ls-pts  { font-weight: 900; color: var(--gold); font-size: .8rem; }
+
+    /* ── SCREEN 4: SCORE REVEAL ── */
+    #screen-score {
+      background: radial-gradient(ellipse at center, #1a2010 0%, var(--bg) 70%);
+    }
+    .score-player-name {
+      font-size: clamp(1.8rem, 6vw, 3rem);
+      font-weight: 900;
+      color: var(--text);
+      text-align: center;
+    }
+    .score-game-label {
+      font-size: 1rem; color: var(--muted);
+      text-align: center; margin: 6px 0 24px;
+    }
+    .score-number {
+      font-size: clamp(4rem, 15vw, 8rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, #f0c040, #40e080);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+      line-height: 1;
+    }
+    @keyframes score-pop {
+      0%   { transform: scale(0); opacity: 0; }
+      70%  { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .score-number { animation: score-pop .5s .1s ease both; }
+    .score-pts { font-size: 1.2rem; color: var(--muted); text-align: center; margin-bottom: 32px; }
+    .score-rank { font-size: 1rem; color: var(--muted); text-align: center; margin-bottom: 24px; }
+    .score-rank strong { color: var(--gold); font-size: 1.3rem; }
+
+    /* ── SCREEN 5: ROUND LEADERBOARD ── */
+    #screen-round {
+      background: radial-gradient(ellipse at center, #101830 0%, var(--bg) 70%);
+    }
+    .round-header {
+      text-align: center; margin-bottom: 24px;
+    }
+    .round-game-badge {
+      display: inline-block;
+      background: var(--purple);
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: .85rem; font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .leaderboard-table {
+      width: 100%; max-width: 520px;
+      border-collapse: collapse;
+    }
+    .leaderboard-table th {
+      font-size: .8rem; letter-spacing: 1px;
+      color: var(--muted);
+      padding: 8px 12px; text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+    .leaderboard-table td {
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: 1rem;
+    }
+    .leaderboard-table tr:last-child td { border-bottom: none; }
+    .leaderboard-table tr.me td { background: rgba(112,96,208,.15); }
+    .rank-medal { font-size: 1.4rem; }
+    .rank-name  { font-weight: 700; }
+    .rank-score { font-weight: 900; color: var(--gold); text-align: left; }
+    .rank-total { font-size: .85rem; color: var(--muted); text-align: left; }
+    .games-progress {
+      display: flex; gap: 8px;
+      justify-content: center;
+      margin: 16px 0 24px;
+    }
+    .gp-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .gp-dot.done { background: var(--gold); }
+    .gp-dot.active { background: var(--purple); transform: scale(1.3); }
+
+    /* ── SCREEN 6: FINAL ── */
+    #screen-final {
+      background: radial-gradient(ellipse at center, #1a1000 0%, var(--bg) 70%);
+    }
+    .podium {
+      display: flex; align-items: flex-end;
+      gap: 8px; margin: 28px 0 20px;
+      direction: ltr; /* podium: left=2nd, center=1st, right=3rd */
+    }
+    .podium-slot {
+      display: flex; flex-direction: column;
+      align-items: center;
+    }
+    .podium-avatar {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 900;
+      margin-bottom: 8px;
+      border: 3px solid transparent;
+    }
+    .podium-slot.p1 .podium-avatar { border-color: var(--gold); background: rgba(240,192,64,.2); }
+    .podium-slot.p2 .podium-avatar { border-color: var(--silver); background: rgba(192,200,216,.1); }
+    .podium-slot.p3 .podium-avatar { border-color: var(--bronze); background: rgba(208,144,80,.1); }
+    .podium-name { font-size: .85rem; font-weight: 700; margin-bottom: 6px; text-align: center; max-width: 80px; word-break: break-word; }
+    .podium-score { font-size: .8rem; color: var(--muted); margin-bottom: 6px; }
+    .podium-block {
+      width: 80px;
+      border-radius: 8px 8px 0 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+    }
+    .podium-slot.p1 .podium-block { height: 90px; background: linear-gradient(180deg,#f0c040,#a07010); }
+    .podium-slot.p2 .podium-block { height: 65px; background: linear-gradient(180deg,#c0c8d8,#708090); }
+    .podium-slot.p3 .podium-block { height: 45px; background: linear-gradient(180deg,#d09050,#805030); }
+
+    .final-scores {
+      width: 100%; max-width: 500px;
+    }
+    .final-scores-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: .95rem;
+    }
+    .final-scores-row:last-child { border-bottom: none; }
+    .fsr-rank { width: 28px; text-align: center; font-size: 1.1rem; }
+    .fsr-name { flex: 1; font-weight: 700; }
+    .fsr-total { font-weight: 900; font-size: 1.1rem; color: var(--gold); }
+    .fsr-breakdown { font-size: .75rem; color: var(--muted); }
+
+    /* ── CONFETTI ── */
+    #confetti-canvas {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 480px) {
+      .podium-block { width: 64px !important; }
+      .podium-avatar { width: 44px; height: 44px; font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<audio id="anthem" src="assets/UEFA Champions League Anthem.mp3" loop></audio>
+
+<!-- ════════════════════════════════
+     SCREEN 1: REGISTRATION
+════════════════════════════════ -->
+<div class="screen active" id="screen-reg">
+  <div class="reg-logo">🏅</div>
+  <h1 class="title-big">האולימפידישי</h1>
+  <p class="subtitle">4 משחקים · כל שחקן בתורו · הניקוד מצטבר</p>
+
+  <div id="game-previews">
+    <div class="gp-card" data-video="assets/למידה פלאפי דישי.mp4" data-name="פלאפי דישי">
+      <div class="gp-emoji">✈️</div><div class="gp-name">פלאפי דישי</div>
+    </div>
+    <div class="gp-card" data-video="assets/למידה קנדישי.mp4" data-name="קנדישי">
+      <div class="gp-emoji">🍬</div><div class="gp-name">קנדישי</div>
+    </div>
+    <div class="gp-card" data-video="assets/למידה דיש תלוי.mp4" data-name="דיש תלוי">
+      <div class="gp-emoji">🎭</div><div class="gp-name">דיש תלוי</div>
+    </div>
+    <div class="gp-card" data-video="assets/למידה תשחץ דישי.mp4" data-name="תשחץ דישי">
+      <div class="gp-emoji">🔤</div><div class="gp-name">תשחץ דישי</div>
+    </div>
+  </div>
+  <div id="vid-popup">
+    <video id="vid-popup-video" autoplay muted loop playsinline></video>
+    <div id="vid-popup-label"></div>
+  </div>
+
+  <div class="card">
+    <div class="reg-input-row">
+      <input id="name-input" type="text" placeholder="שם השחקן..." maxlength="20"
+             onkeydown="if(event.key==='Enter') addPlayer()">
+      <button class="btn btn-sm" onclick="addPlayer()">+ הוסף</button>
+    </div>
+    <ul id="player-list"></ul>
+    <div class="start-area">
+      <div class="start-hint" id="start-hint">הוסף לפחות 2 שחקנים כדי להתחיל</div>
+      <button class="btn btn-gold" id="start-btn" onclick="startTournament()" disabled>
+        🎮 צאו לדרך!
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════
+     SCREEN: RECOVERY
+════════════════════════════════ -->
+<div class="screen" id="screen-recover">
+  <div class="reg-logo">🏅</div>
+  <h1 class="title-big">יש טורניר פעיל!</h1>
+  <p class="subtitle" id="recover-info"></p>
+  <div style="display:flex;gap:14px;margin-top:28px;flex-wrap:wrap;justify-content:center">
+    <button class="btn btn-gold" onclick="resumeTournament()">▶ המשך טורניר</button>
+    <button class="btn btn-sm" onclick="discardAndRestart()">🔁 התחל מחדש</button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════
+     SCREEN 2: BRIEFING
+════════════════════════════════ -->
+<div class="screen" id="screen-briefing">
+  <div class="briefing-player" id="brief-player"></div>
+  <div class="briefing-game-emoji" id="brief-emoji"></div>
+  <div class="briefing-game-name" id="brief-game"></div>
+  <div class="briefing-meta" id="brief-meta"></div>
+  <div class="briefing-space-hint">לחץ SPACE להתחיל</div>
+</div>
+
+
+<!-- ════════════════════════════════
+     SCREEN: LEARN
+════════════════════════════════ -->
+<div class="screen" id="screen-learn">
+  <div class="learn-header">
+    <span class="learn-header-emoji" id="learn-emoji"></span>
+    <span class="learn-header-title"  id="learn-title"></span>
+  </div>
+  <div class="learn-body">
+    <div class="learn-video-wrap">
+      <video id="learn-video" autoplay muted loop playsinline></video>
+    </div>
+    <div class="learn-text-wrap">
+      <div class="learn-text-label">🎮 איך משחקים?</div>
+      <div class="learn-howto" id="learn-howto"></div>
+    </div>
+  </div>
+  <div class="learn-player-line">תור של: <strong id="learn-player"></strong></div>
+  <div class="briefing-space-hint">לחץ SPACE להתחיל</div>
+</div>
+
+
+<!-- ════════════════════════════════
+     SCREEN 3: PLAYING
+════════════════════════════════ -->
+<div class="screen" id="screen-playing">
+  <div id="playing-header">
+    <span class="ph-player" id="ph-player"></span>
+    <span class="ph-game"   id="ph-game"></span>
+    <span class="ph-attempt" id="ph-attempt" style="display:none"></span>
+  </div>
+  <div id="playing-body">
+    <iframe id="game-frame" allowfullscreen></iframe>
+    <div id="live-scores">
+      <h4>🏅 דירוג</h4>
+      <div id="ls-rows"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════
+     SCREEN 4: SCORE REVEAL
+════════════════════════════════ -->
+<div class="screen" id="screen-score">
+  <div class="score-player-name" id="score-player"></div>
+  <div class="score-game-label"  id="score-game-label"></div>
+  <div class="score-number"      id="score-number"></div>
+  <div class="score-pts">נקודות</div>
+  <div class="score-rank"        id="score-rank"></div>
+  <button class="btn btn-primary" id="score-next-btn" onclick="afterScoreReveal()">
+    ממשיכים ←
+  </button>
+</div>
+
+
+<!-- ════════════════════════════════
+     SCREEN 5: ROUND LEADERBOARD
+════════════════════════════════ -->
+<div class="screen" id="screen-round">
+  <div class="round-header">
+    <div class="round-game-badge" id="round-game-badge"></div>
+    <h2 class="title-big" style="font-size:1.8rem">טבלת הביניים</h2>
+    <div class="games-progress" id="games-progress"></div>
+  </div>
+  <table class="leaderboard-table" id="round-table"></table>
+  <br>
+  <button class="btn btn-gold" id="round-next-btn" onclick="advanceToNextGame()"></button>
+</div>
+
+
+<!-- ════════════════════════════════
+     SCREEN 6: FINAL
+════════════════════════════════ -->
+<div class="screen" id="screen-final">
+  <h1 class="title-big" style="color:var(--gold)">🏆 אלוף האולימפידישי</h1>
+  <div class="podium" id="final-podium"></div>
+  <div class="final-scores" id="final-scores"></div>
+  <br>
+  <button class="btn btn-primary" onclick="resetTournament()" style="margin-top:12px">
+    🔁 סיבוב נוסף
+  </button>
+</div>
+
+
+<script>
+// ════════════════════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════════════════════
+const GAMES = [
+  {
+    id: 'flying-dishi', name: 'פלאפי דישי', emoji: '✈️',
+    file: 'games/flying-dishi.html', flying: true,
+    music:      'assets/דישי נינג׳ה.mp3',
+    learnVideo: 'assets/למידה פלאפי דישי.mp4',
+    howTo: 'לחץ SPACE כדי שדישי יטוס למעלה! הימנע מהמכשולים. כל 10 נקודות מקבלים בונוס קולי מיוחד.',
+  },
+  {
+    id: 'candy-dishi', name: 'קנדישי', emoji: '🍬',
+    file: 'games/candy-dishi.html',
+    music:      'assets/קנדישי.wav',
+    learnVideo: 'assets/למידה קנדישי.mp4',
+    howTo: 'לחץ על ממתק ואז על ממתק שכן — שורה של 3 ואחר נעלמת! שורה ארוכה יותר = ניקוד וזמן בונוס.',
+  },
+  {
+    id: 'dishi-hangman', name: 'דיש תלוי', emoji: '🎭',
+    file: 'games/dishi-hangman.html',
+    music:      'assets/דישי השומר של כל העם.mp3',
+    learnVideo: 'assets/למידה דיש תלוי.mp4',
+    howTo: 'לחץ על אותיות כדי לנחש את המילה הנסתרת. יש 9 טעויות מותרות — כל טעות מציירת חלק מדישי התלוי!',
+  },
+  {
+    id: 'dishi-wordsearch', name: 'תשחץ דישי', emoji: '🔤',
+    file: 'games/dishi-wordsearch.html',
+    music:      'assets/אופקי_ואנכי.mp3',
+    learnVideo: 'assets/למידה תשחץ דישי.mp4',
+    howTo: 'מצא מילות נסתרות ברשת! לחץ על האות הראשונה ואז על האחרונה. מצאת את כולן? מקבל ניקוד כפול!',
+  },
+];
+
+// tournament state
+let players   = [];   // [{ name, rawScores:[0,0,0,0], scores:[0,0,0,0], total }]
+window._tournamentActive = false;
+let gameIdx   = 0;    // current game index (0-3)
+let playerIdx = 0;    // current player index within current game
+
+// Points table by finish position — scales dynamically with player count.
+// 1st always gets 1000. Each step down loses ~30% of the previous value,
+// with a floor of 50 so last place always gets something.
+function pointsTable(n) {
+  const table = [];
+  for (let i = 0; i < n; i++) {
+    const pts = i === 0 ? 1000
+              : Math.max(50, Math.round(table[i - 1] * 0.65));
+    table.push(pts);
+  }
+  return table;
+}
+
+// Rank players by raw score for current game, then assign points by position.
+function normalizeCurrentGame() {
+  const pts = pointsTable(players.length);
+
+  // Sort by raw score descending; ties share the higher points
+  const ranked = [...players].sort((a, b) => b.rawScores[gameIdx] - a.rawScores[gameIdx]);
+  const rawSorted = ranked.map(p => p.rawScores[gameIdx]);
+
+  ranked.forEach((player, rank) => {
+    // Find all tied players and give them all the same (best) points
+    const tieStart = rawSorted.indexOf(player.rawScores[gameIdx]);
+    player.scores[gameIdx] = pts[tieStart];
+    player.total = player.scores.reduce((a, b) => a + b, 0);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════════════
+const _anthem = document.getElementById('anthem');
+
+function _playAnthem() {
+  _anthem.volume = 0.55;
+  _anthem.currentTime = 0;
+  _anthem.play().catch(() => {});
+}
+
+// ════════════════════════════════════════════════════════
+//  SESSION PERSISTENCE (localStorage)
+// ════════════════════════════════════════════════════════
+const SESSION_KEY = 'olympidishi_session';
+const SESSION_TTL = 3_600_000; // 1 hour
+
+function saveSession(phase) {
+  if (!window._tournamentActive) return;
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      ts: Date.now(),
+      gameIdx,
+      playerIdx,
+      phase,
+      players: players.map(p => ({
+        name: p.name,
+        rawScores: [...p.rawScores],
+        scores: [...p.scores],
+        total: p.total,
+      })),
+    }));
+  } catch (e) { /* quota exceeded — silently ignore */ }
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (Date.now() - data.ts > SESSION_TTL) { clearSession(); return null; }
+    if (!Array.isArray(data.players) || data.players.length < 2) { clearSession(); return null; }
+    return data;
+  } catch (e) { clearSession(); return null; }
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // Map screen id to phase for session persistence
+  const phaseMap = {
+    'screen-briefing': 'briefing', 'screen-learn': 'briefing',
+    'screen-playing': 'playing', 'screen-score': 'score',
+    'screen-round': 'round',
+  };
+  if (phaseMap[id]) saveSession(phaseMap[id]);
+  if (id === 'screen-reg' || id === 'screen-final' || id === 'screen-recover') {
+    _playAnthem();
+  } else {
+    _anthem.pause();
+  }
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function playerInitials(name) {
+  return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() || '?';
+}
+
+function rankSuffix(n) {
+  return n === 1 ? '🥇' : n === 2 ? '🥈' : n === 3 ? '🥉' : `${n}.`;
+}
+
+function sortedByTotal() {
+  return [...players].sort((a,b) => b.total - a.total);
+}
+
+// ════════════════════════════════════════════════════════
+//  REGISTRATION
+// ════════════════════════════════════════════════════════
+function addPlayer() {
+  const input = document.getElementById('name-input');
+  const name  = input.value.trim();
+  if (!name) return;
+  if (players.find(p => p.name === name)) { input.select(); return; }
+
+  players.push({ name, rawScores: [0,0,0,0], scores: [0,0,0,0], total: 0 });
+  input.value = '';
+  input.focus();
+  renderPlayerList();
+}
+
+function removePlayer(idx) {
+  players.splice(idx, 1);
+  renderPlayerList();
+}
+
+function renderPlayerList() {
+  const ul  = document.getElementById('player-list');
+  const btn = document.getElementById('start-btn');
+  const hint= document.getElementById('start-hint');
+
+  ul.innerHTML = players.map((p, i) => `
+    <li>
+      <span class="pnum">${i + 1}</span>
+      <span style="flex:1;padding:0 10px">${esc(p.name)}</span>
+      <button class="btn btn-red" onclick="removePlayer(${i})">✕</button>
+    </li>
+  `).join('');
+
+  const ok = players.length >= 2;
+  btn.disabled = !ok;
+  hint.textContent = ok
+    ? `${players.length} שחקנים — מוכנים!`
+    : `הוסף לפחות ${2 - players.length} שחקן נוסף`;
+}
+
+// ════════════════════════════════════════════════════════
+//  TOURNAMENT START
+// ════════════════════════════════════════════════════════
+function startTournament() {
+  if (document.activeElement) document.activeElement.blur();
+  gameIdx   = 0;
+  playerIdx = 0;
+  window._tournamentActive = true;
+  players.forEach(p => { p.rawScores = [0,0,0,0]; p.scores = [0,0,0,0]; p.total = 0; });
+  showBriefing();
+}
+
+// ════════════════════════════════════════════════════════
+//  BRIEFING — wait for Space
+// ════════════════════════════════════════════════════════
+function showBriefing() {
+  const player = players[playerIdx];
+  const game   = GAMES[gameIdx];
+
+  document.getElementById('brief-player').textContent = player.name;
+  document.getElementById('brief-emoji').textContent  = game.emoji;
+  document.getElementById('brief-game').textContent   = game.name;
+  document.getElementById('brief-meta').textContent   =
+    game.flying ? '3 ניסיונות — ניקוד מצטבר' : 'עד שנגמר הזמן';
+
+  showScreen('screen-briefing');
+}
+
+// Space OR click on briefing → load learn.html in game frame
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && document.getElementById('screen-briefing').classList.contains('active')) {
+    e.preventDefault();
+    startGame();
+  }
+});
+document.getElementById('screen-briefing').addEventListener('click', () => {
+  if (!document.getElementById('screen-briefing').classList.contains('active')) return;
+  startGame();
+});
+
+// ── Beep sound ────────────────────────────────────────
+function playStartBeep() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1100].forEach((freq, i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = 'sine'; o.frequency.value = freq;
+      const t = ac.currentTime + i * 0.18;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.4, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      o.start(t); o.stop(t + 0.25);
+    });
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════
+//  GAME LAUNCH
+// ════════════════════════════════════════════════════════
+function startGame() {
+  const player = players[playerIdx];
+  const game   = GAMES[gameIdx];
+
+  document.getElementById('ph-player').textContent = `▶ ${player.name}`;
+  document.getElementById('ph-game').textContent   = `${game.emoji} ${game.name}`;
+
+  const attemptEl = document.getElementById('ph-attempt');
+  if (game.flying) {
+    attemptEl.style.display = '';
+    attemptEl.textContent   = 'ניסיון 1 / 3';
+  } else {
+    attemptEl.style.display = 'none';
+  }
+
+  renderLiveScores();
+
+  const frame = document.getElementById('game-frame');
+  // Load learn.html first — it navigates to the actual game when the user is ready
+  frame.src    = `learn.html?game=${game.id}&olympic=1&seed=${playerIdx}`;
+  frame.onload = () => { frame.focus(); };
+
+  showScreen('screen-playing');
+  playStartBeep();
+}
+
+// ── Live scoreboard during play ──────────────────────
+function renderLiveScores() {
+  const sorted = sortedByTotal();
+  const medals = ['🥇','🥈','🥉'];
+  const rows = document.getElementById('ls-rows');
+  if (!rows) return;
+  rows.innerHTML = sorted.map((p, i) => {
+    const isCurrent = p.name === players[playerIdx]?.name;
+    return `<div class="ls-row${isCurrent ? ' current' : ''}">
+      <span class="ls-rank">${medals[i] || (i+1)}</span>
+      <span class="ls-name">${esc(p.name)}</span>
+      <span class="ls-pts">${p.total}</span>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════
+//  MESSAGE LISTENER (games → olympidishi)
+// ════════════════════════════════════════════════════════
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'OLYMPIDISHI_SCORE') return;
+
+  const rawScore = Number(e.data.score) || 0;
+  const player   = players[playerIdx];
+  const game     = GAMES[gameIdx];
+
+  // Store raw score — normalized points assigned only after ALL players finish
+  player.rawScores[gameIdx] = rawScore;
+  // Do NOT touch scores/total here; leaderboard updates only at round end
+
+  showScoreReveal(player, game, rawScore);
+});
+
+// flying attempt counter update from game
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'OLYMPIDISHI_ATTEMPT') return;
+  const el = document.getElementById('ph-attempt');
+  el.textContent = `ניסיון ${e.data.attempt} / 3`;
+});
+
+// ════════════════════════════════════════════════════════
+//  SCORE REVEAL
+// ════════════════════════════════════════════════════════
+function showScoreReveal(player, game, score) {
+  // clear iframe to stop game audio
+  document.getElementById('game-frame').src = 'about:blank';
+
+  document.getElementById('score-player').textContent    = player.name;
+  document.getElementById('score-game-label').textContent = `${game.emoji} ${game.name}`;
+
+  // animate score counting up
+  const el = document.getElementById('score-number');
+  el.textContent = '0';
+  // reset animation
+  el.style.animation = 'none'; el.offsetHeight; el.style.animation = '';
+
+  let cur = 0;
+  const dur   = Math.min(1200, score * 2);
+  const steps = 40;
+  const step  = score / steps;
+  const delay = dur / steps;
+  const timer = setInterval(() => {
+    cur = Math.min(cur + step, score);
+    el.textContent = Math.round(cur);
+    if (cur >= score) clearInterval(timer);
+  }, delay);
+
+  // rank message — show raw score rank within current game only
+  // (normalized points not yet assigned, so total-based rank is stale)
+  const rawSorted = [...players].sort((a, b) => b.rawScores[gameIdx] - a.rawScores[gameIdx]);
+  const gameRank  = rawSorted.findIndex(p => p.name === player.name) + 1;
+  document.getElementById('score-rank').innerHTML =
+    gameRank === 1 ? `<strong>🥇 הכי גבוה במשחק הזה!</strong>` :
+    `מקום במשחק: <strong>${rankSuffix(gameRank)}</strong>`;
+
+  showScreen('screen-score');
+}
+
+// ════════════════════════════════════════════════════════
+//  AFTER SCORE → DECIDE NEXT STEP
+// ════════════════════════════════════════════════════════
+function afterScoreReveal() {
+  playerIdx++;
+  if (playerIdx < players.length) {
+    showBriefing();
+  } else {
+    // All players done → normalize scores for this game, then show leaderboard
+    playerIdx = 0;
+    normalizeCurrentGame();
+    showRoundLeaderboard();
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  ROUND LEADERBOARD
+// ════════════════════════════════════════════════════════
+function showRoundLeaderboard() {
+  const game   = GAMES[gameIdx];
+  const isLast = gameIdx === GAMES.length - 1;
+
+  document.getElementById('round-game-badge').textContent =
+    `${game.emoji} ${game.name}`;
+
+  // progress dots
+  const prog = document.getElementById('games-progress');
+  prog.innerHTML = GAMES.map((g,i) =>
+    `<div class="gp-dot ${i < gameIdx ? 'done' : i === gameIdx ? 'active' : ''}"></div>`
+  ).join('');
+
+  // table sorted by running total (= true leaderboard)
+  const sorted = sortedByTotal();
+
+  const pts = pointsTable(players.length);
+  const tbody = sorted.map((p, i) => `
+    <tr>
+      <td class="rank-medal">${rankSuffix(i+1)}</td>
+      <td class="rank-name">${esc(p.name)}</td>
+      <td class="rank-score">+${p.scores[gameIdx]} נק'<br><span style="font-size:.72rem;color:var(--muted);font-weight:400">${p.rawScores[gameIdx]} גולמי</span></td>
+      <td class="rank-total" style="direction:ltr">סה"כ: <b>${p.total}</b></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('round-table').innerHTML = `
+    <thead><tr>
+      <th></th>
+      <th>שחקן</th>
+      <th style="text-align:left">משחק זה</th>
+      <th style="text-align:left">סה"כ</th>
+    </tr></thead>
+    <tbody>${tbody}</tbody>
+  `;
+
+  const nextBtn = document.getElementById('round-next-btn');
+  nextBtn.textContent = isLast ? '🏆 לתוצאות הסופיות!' : '▶ המשחק הבא';
+
+  showScreen('screen-round');
+}
+
+function advanceToNextGame() {
+  gameIdx++;
+  if (gameIdx >= GAMES.length) {
+    showFinal();
+  } else {
+    showBriefing();
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  FINAL
+// ════════════════════════════════════════════════════════
+function showFinal() {
+  clearSession();
+  window._tournamentActive = false;
+  const sorted = sortedByTotal();
+
+  // Podium (direction: ltr so left=2nd, center=1st, right=3rd)
+  const podiumSlots = [
+    { cls: 'p2', rank: 2, data: sorted[1] },
+    { cls: 'p1', rank: 1, data: sorted[0] },
+    { cls: 'p3', rank: 3, data: sorted[2] },
+  ].filter(s => s.data);
+
+  document.getElementById('final-podium').innerHTML = podiumSlots.map(s => `
+    <div class="podium-slot ${s.cls}">
+      <div class="podium-avatar">${esc(playerInitials(s.data.name))}</div>
+      <div class="podium-name">${esc(s.data.name)}</div>
+      <div class="podium-score">${s.data.total} נק'</div>
+      <div class="podium-block">${rankSuffix(s.rank)}</div>
+    </div>
+  `).join('');
+
+  // Full scores table
+  document.getElementById('final-scores').innerHTML = sorted.map((p, i) => {
+    const breakdown = GAMES.map((g,gi) =>
+      `${g.emoji}${p.scores[gi]}`
+    ).join(' · ');
+    return `
+      <div class="final-scores-row">
+        <div class="fsr-rank">${rankSuffix(i+1)}</div>
+        <div style="flex:1">
+          <div class="fsr-name">${esc(p.name)}</div>
+          <div class="fsr-breakdown">${breakdown}</div>
+        </div>
+        <div class="fsr-total">${p.total}</div>
+      </div>
+    `;
+  }).join('');
+
+  showScreen('screen-final');
+  launchConfetti();
+}
+
+// ════════════════════════════════════════════════════════
+//  CONFETTI
+// ════════════════════════════════════════════════════════
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx    = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ['#f0c040','#40e080','#e04080','#60a0f0','#e080f0','#ffffff'];
+  const pieces = Array.from({length:120}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * -canvas.height,
+    w: 6 + Math.random() * 8,
+    h: 10 + Math.random() * 6,
+    r: Math.random() * Math.PI * 2,
+    dr: (Math.random() - .5) * .15,
+    vy: 2 + Math.random() * 3,
+    vx: (Math.random() - .5) * 2,
+    color: colors[Math.floor(Math.random() * colors.length)],
+  }));
+
+  let raf, _cfLast = 0;
+  const draw = (ts = 0) => {
+    const _dt = _cfLast ? Math.min((ts - _cfLast) / 1000, 0.05) * 60 : 1;
+    _cfLast = ts;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    pieces.forEach(p => {
+      p.x += p.vx * _dt; p.y += p.vy * _dt; p.r += p.dr * _dt;
+      if (p.y < canvas.height + 20) alive = true;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.r);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    if (alive) raf = requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(draw);
+}
+
+// ════════════════════════════════════════════════════════
+//  RESET
+// ════════════════════════════════════════════════════════
+function resetTournament() {
+  clearSession();
+  players.forEach(p => { p.rawScores = [0,0,0,0]; p.scores = [0,0,0,0]; p.total = 0; });
+  window._tournamentActive = false;
+  gameIdx = 0; playerIdx = 0;
+  renderPlayerList();
+  showScreen('screen-reg');
+}
+
+// ── Exit via postMessage (reliable cross-origin) ──────────────────
+window.addEventListener('message', e => {
+  if (e.data?.type === 'REQUEST_CLOSE') {
+    if (window._tournamentActive) {
+      window.parent.postMessage({ type: 'TOURNAMENT_ACTIVE' }, '*');
+    } else {
+      window.parent.postMessage({ type: 'CLOSE_OK' }, '*');
+    }
+  }
+});
+
+// ════════════════════════════════════════════════════════
+//  SESSION RECOVERY (boot)
+// ════════════════════════════════════════════════════════
+function resumeTournament() {
+  const data = loadSession();
+  if (!data) { showScreen('screen-reg'); return; }
+
+  // Restore state
+  players   = data.players.map(p => ({
+    name: p.name,
+    rawScores: [...p.rawScores],
+    scores: [...p.scores],
+    total: p.total,
+  }));
+  gameIdx   = data.gameIdx;
+  playerIdx = data.playerIdx;
+  window._tournamentActive = true;
+
+  // If was mid-game (playing), restart at briefing for that player
+  if (data.phase === 'playing' || data.phase === 'briefing') {
+    showBriefing();
+  } else if (data.phase === 'score') {
+    // Was on score reveal — go to briefing for next player
+    showBriefing();
+  } else if (data.phase === 'round') {
+    showRoundLeaderboard();
+  } else {
+    showBriefing();
+  }
+}
+
+function discardAndRestart() {
+  clearSession();
+  players = [];
+  renderPlayerList();
+  showScreen('screen-reg');
+}
+
+// Boot: check for existing session
+const _savedSession = loadSession();
+if (_savedSession) {
+  const gName = GAMES[_savedSession.gameIdx]?.name || '';
+  document.getElementById('recover-info').textContent =
+    `${_savedSession.players.length} שחקנים · ${gName} (משחק ${_savedSession.gameIdx + 1} מתוך 4)`;
+  showScreen('screen-recover');
+} else {
+  _playAnthem();
+}
+
+// ── Game card preview hover ──────────────────────────────────────
+const _vidPopup      = document.getElementById('vid-popup');
+const _vidPopupVideo = document.getElementById('vid-popup-video');
+const _vidPopupLabel = document.getElementById('vid-popup-label');
+
+document.querySelectorAll('.gp-card').forEach(card => {
+  card.addEventListener('mouseenter', () => {
+    const src  = card.dataset.video;
+    const name = card.dataset.name;
+    if (!src) return;
+    _vidPopupVideo.src = src;
+    _vidPopupVideo.load();
+    _vidPopupVideo.play().catch(() => {});
+    _vidPopupLabel.textContent = name;
+
+    const rect  = card.getBoundingClientRect();
+    const pw    = 270;
+    let   left  = rect.left + rect.width / 2 - pw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+    _vidPopup.style.left   = `${left}px`;
+    _vidPopup.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+    _vidPopup.style.top    = '';
+    _vidPopup.classList.add('show');
+  });
+  card.addEventListener('mouseleave', () => {
+    _vidPopup.classList.remove('show');
+    _vidPopupVideo.pause();
+    _vidPopupVideo.src = '';
+  });
+});
+</script>
+</body>
+</html>
