@@ -876,7 +876,7 @@ function showBriefing() {
   document.getElementById('brief-emoji').textContent  = game.emoji;
   document.getElementById('brief-game').textContent   = game.name;
   document.getElementById('brief-meta').textContent   =
-    game.flying ? '3 ניסיונות — ניקוד מצטבר' : 'עד שנגמר הזמן';
+    game.flying ? 'ניסיון אחד — תעוף גבוה!' : 'עד שנגמר הזמן';
 
   showScreen('screen-briefing');
 }
@@ -923,7 +923,7 @@ function startGame() {
   const attemptEl = document.getElementById('ph-attempt');
   if (game.flying) {
     attemptEl.style.display = '';
-    attemptEl.textContent   = 'ניסיון 1 / 3';
+    attemptEl.textContent   = 'ניסיון יחיד';
   } else {
     attemptEl.style.display = 'none';
   }
