@@ -155,6 +155,15 @@
     @keyframes spc-blink {
       0%,100% { opacity: 1; } 50% { opacity: 0.35; }
     }
+    /* ── Mobile responsiveness ── */
+    @media (max-width: 480px) {
+      h1 { font-size: 1.5rem; }
+      #timerDisplay { font-size: clamp(2rem, 8vw, 3.4rem); }
+      #word-list { max-width: 100%; gap: 4px; padding: 0 4px; }
+      .word-chip { font-size: 0.75rem; padding: 3px 8px; }
+      .btn { padding: 13px 28px; font-size: 1rem; }
+      #result-title { font-size: 2rem; }
+    }
   </style>
 </head>
 <body>

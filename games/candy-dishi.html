@@ -108,6 +108,16 @@
     @keyframes spc-blink {
       0%,100% { opacity: 1; } 50% { opacity: 0.35; }
     }
+    /* ── Mobile responsiveness ── */
+    @media (max-width: 480px) {
+      h1 { font-size: 1.8rem; }
+      .hud-box { min-width: 80px; padding: 5px 14px; }
+      .hud-val { font-size: 1.5rem; }
+      #bonus-flash { top: 85px; font-size: 1.2rem; }
+      .btn { padding: 14px 32px; font-size: 1.1rem; }
+      #ov-title { font-size: 2rem; }
+      #ov-score { font-size: 1.6rem; }
+    }
     @keyframes overlay-pulse {
       from { background: transparent; }
       to   { background: rgba(255,0,0,0.06); }

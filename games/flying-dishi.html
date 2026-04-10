@@ -98,6 +98,14 @@
             text-align: center;
             margin-top: 1px;
         }
+        /* ── Mobile: stack vertically, hide scoreboard ── */
+        @media (max-width: 768px) {
+            body { flex-direction: column; align-items: center; gap: 8px; }
+            #scorePanel { display: none; }
+        }
+        @media (max-width: 480px) {
+            .ctrl-btn { padding: 10px 18px; font-size: 14px; min-height: 44px; }
+        }
     </style>
 </head>
 <body>

@@ -284,6 +284,20 @@
     @keyframes spc-blink {
       0%,100% { opacity: 1; } 50% { opacity: 0.35; }
     }
+    /* ── Mobile responsiveness ── */
+    @media (max-width: 480px) {
+      h1 { font-size: 1.5rem; }
+      #timerDisplay { font-size: clamp(2rem, 8vw, 3.4rem); }
+      #hangman-svg { width: min(140px, 40vw); height: auto; }
+      #word-display { max-width: 100%; padding: 0 4px; }
+      .letter-box { width: 26px; height: 36px; font-size: 1.2rem; line-height: 36px; }
+      #keyboard { max-width: 100%; gap: 4px; padding: 0 2px; }
+      .key-btn { width: 32px; height: 44px; font-size: 0.9rem; border-radius: 6px; }
+      #hint-text { font-size: 0.78rem; }
+      .btn { padding: 13px 28px; font-size: 1rem; }
+      #bonus-flash { top: 80px; font-size: 1.2rem; }
+      #result-title { font-size: 2rem; }
+    }
   </style>
 </head>
 <body>
