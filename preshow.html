@@ -81,6 +81,22 @@
     }
     #tap-hint.show { opacity: 1; pointer-events: all; }
 
+    #skip-btn {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: rgba(255,255,255,0.12);
+      border: 1.5px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.7);
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-family: inherit; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(8px);
+    }
+    #skip-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
+
     /* ── Outro overlay ── */
     #outro {
       position: fixed; inset: 0; z-index: 80;
@@ -140,6 +156,8 @@
 </div>
 
 <div id="tap-hint">▶ לחץ להפעלה</div>
+
+<button id="skip-btn" onclick="goToOlympic()">דלג על הסרטון ←</button>
 
 <div id="outro">
   <div id="outro-medal">🏅</div>

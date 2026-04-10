@@ -159,6 +159,17 @@
     }
     .gp-emoji { font-size: 2.2rem; line-height: 1; }
     .gp-name  { font-size: .72rem; color: var(--muted); text-align: center; font-weight: 600; }
+    .gp-check {
+      width: 22px; height: 22px; border-radius: 6px;
+      border: 2px solid var(--border); background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: transparent; transition: all 0.2s;
+      margin-top: 4px;
+    }
+    .gp-card.selected { border-color: var(--gold); box-shadow: 0 0 18px rgba(240,192,64,0.25); }
+    .gp-card.selected .gp-check {
+      border-color: var(--gold); background: var(--gold); color: #000;
+    }
 
     /* ── Video preview popup ── */
     #vid-popup {
@@ -509,20 +520,20 @@
 <div class="screen active" id="screen-reg">
   <div class="reg-logo">🏅</div>
   <h1 class="title-big">האולימפידישי</h1>
-  <p class="subtitle">4 משחקים · כל שחקן בתורו · הניקוד מצטבר</p>
+  <p class="subtitle" id="reg-subtitle">4 משחקים · כל שחקן בתורו · הניקוד מצטבר</p>
 
   <div id="game-previews">
-    <div class="gp-card" data-video="assets/למידה פלאפי דישי.mp4" data-name="פלאפי דישי">
-      <div class="gp-emoji">✈️</div><div class="gp-name">פלאפי דישי</div>
+    <div class="gp-card selected" data-game-idx="0" data-video="assets/למידה פלאפי דישי.mp4" data-name="פלאפי דישי" onclick="toggleGameSelection(this)">
+      <div class="gp-emoji">✈️</div><div class="gp-name">פלאפי דישי</div><div class="gp-check">✓</div>
     </div>
-    <div class="gp-card" data-video="assets/למידה קנדישי.mp4" data-name="קנדישי">
-      <div class="gp-emoji">🍬</div><div class="gp-name">קנדישי</div>
+    <div class="gp-card selected" data-game-idx="1" data-video="assets/למידה קנדישי.mp4" data-name="קנדישי" onclick="toggleGameSelection(this)">
+      <div class="gp-emoji">🍬</div><div class="gp-name">קנדישי</div><div class="gp-check">✓</div>
     </div>
-    <div class="gp-card" data-video="assets/למידה דיש תלוי.mp4" data-name="דיש תלוי">
-      <div class="gp-emoji">🎭</div><div class="gp-name">דיש תלוי</div>
+    <div class="gp-card selected" data-game-idx="2" data-video="assets/למידה דיש תלוי.mp4" data-name="דיש תלוי" onclick="toggleGameSelection(this)">
+      <div class="gp-emoji">🎭</div><div class="gp-name">דיש תלוי</div><div class="gp-check">✓</div>
     </div>
-    <div class="gp-card" data-video="assets/למידה תשחץ דישי.mp4" data-name="תשחץ דישי">
-      <div class="gp-emoji">🔤</div><div class="gp-name">תשחץ דישי</div>
+    <div class="gp-card selected" data-game-idx="3" data-video="assets/למידה תשחץ דישי.mp4" data-name="תשחץ דישי" onclick="toggleGameSelection(this)">
+      <div class="gp-emoji">🔤</div><div class="gp-name">תשחץ דישי</div><div class="gp-check">✓</div>
     </div>
   </div>
   <div id="vid-popup">
@@ -694,10 +705,34 @@ const GAMES = [
 ];
 
 // tournament state
-let players   = [];   // [{ name, rawScores:[0,0,0,0], scores:[0,0,0,0], total }]
+let players   = [];
+let activeGames = [...GAMES]; // filtered by user selection
 window._tournamentActive = false;
-let gameIdx   = 0;    // current game index (0-3)
-let playerIdx = 0;    // current player index within current game
+let gameIdx   = 0;
+let playerIdx = 0;
+
+// ── Game selection toggle ────────────────────────────────────────
+function toggleGameSelection(card) {
+  card.classList.toggle('selected');
+  updateGameSelectionUI();
+}
+
+function updateGameSelectionUI() {
+  const selected = document.querySelectorAll('.gp-card.selected');
+  const count = selected.length;
+  const sub = document.getElementById('reg-subtitle');
+  sub.textContent = `${count} משחקים · כל שחקן בתורו · הניקוד מצטבר`;
+  // Require at least 1 game
+  const startBtn = document.getElementById('start-btn');
+  const ok = players.length >= 2 && count >= 1;
+  startBtn.disabled = !ok;
+}
+
+function getSelectedGameIndices() {
+  return [...document.querySelectorAll('.gp-card.selected')]
+    .map(c => parseInt(c.dataset.gameIdx))
+    .sort((a, b) => a - b);
+}
 
 // Points table by finish position — scales dynamically with player count.
 // 1st always gets 1000. Each step down loses ~30% of the previous value,
@@ -753,6 +788,7 @@ function saveSession(phase) {
       gameIdx,
       playerIdx,
       phase,
+      activeGameIds: activeGames.map(g => g.id),
       players: players.map(p => ({
         name: p.name,
         rawScores: [...p.rawScores],
@@ -846,11 +882,14 @@ function renderPlayerList() {
     </li>
   `).join('');
 
-  const ok = players.length >= 2;
+  const gameCount = document.querySelectorAll('.gp-card.selected').length;
+  const ok = players.length >= 2 && gameCount >= 1;
   btn.disabled = !ok;
   hint.textContent = ok
-    ? `${players.length} שחקנים — מוכנים!`
-    : `הוסף לפחות ${2 - players.length} שחקן נוסף`;
+    ? `${players.length} שחקנים · ${gameCount} משחקים — מוכנים!`
+    : players.length < 2
+      ? `הוסף לפחות ${2 - players.length} שחקן נוסף`
+      : 'בחר לפחות משחק אחד';
 }
 
 // ════════════════════════════════════════════════════════
@@ -858,10 +897,17 @@ function renderPlayerList() {
 // ════════════════════════════════════════════════════════
 function startTournament() {
   if (document.activeElement) document.activeElement.blur();
+  const selectedIdx = getSelectedGameIndices();
+  activeGames = selectedIdx.map(i => GAMES[i]);
   gameIdx   = 0;
   playerIdx = 0;
   window._tournamentActive = true;
-  players.forEach(p => { p.rawScores = [0,0,0,0]; p.scores = [0,0,0,0]; p.total = 0; });
+  const n = activeGames.length;
+  players.forEach(p => {
+    p.rawScores = Array(n).fill(0);
+    p.scores    = Array(n).fill(0);
+    p.total     = 0;
+  });
   showBriefing();
 }
 
@@ -870,7 +916,7 @@ function startTournament() {
 // ════════════════════════════════════════════════════════
 function showBriefing() {
   const player = players[playerIdx];
-  const game   = GAMES[gameIdx];
+  const game   = activeGames[gameIdx];
 
   document.getElementById('brief-player').textContent = player.name;
   document.getElementById('brief-emoji').textContent  = game.emoji;
@@ -915,7 +961,7 @@ function playStartBeep() {
 // ════════════════════════════════════════════════════════
 function startGame() {
   const player = players[playerIdx];
-  const game   = GAMES[gameIdx];
+  const game   = activeGames[gameIdx];
 
   document.getElementById('ph-player').textContent = `▶ ${player.name}`;
   document.getElementById('ph-game').textContent   = `${game.emoji} ${game.name}`;
@@ -963,7 +1009,7 @@ window.addEventListener('message', e => {
 
   const rawScore = Number(e.data.score) || 0;
   const player   = players[playerIdx];
-  const game     = GAMES[gameIdx];
+  const game     = activeGames[gameIdx];
 
   // Store raw score — normalized points assigned only after ALL players finish
   player.rawScores[gameIdx] = rawScore;
@@ -1036,15 +1082,15 @@ function afterScoreReveal() {
 //  ROUND LEADERBOARD
 // ════════════════════════════════════════════════════════
 function showRoundLeaderboard() {
-  const game   = GAMES[gameIdx];
-  const isLast = gameIdx === GAMES.length - 1;
+  const game   = activeGames[gameIdx];
+  const isLast = gameIdx === activeGames.length - 1;
 
   document.getElementById('round-game-badge').textContent =
     `${game.emoji} ${game.name}`;
 
   // progress dots
   const prog = document.getElementById('games-progress');
-  prog.innerHTML = GAMES.map((g,i) =>
+  prog.innerHTML = activeGames.map((g,i) =>
     `<div class="gp-dot ${i < gameIdx ? 'done' : i === gameIdx ? 'active' : ''}"></div>`
   ).join('');
 
@@ -1079,7 +1125,7 @@ function showRoundLeaderboard() {
 
 function advanceToNextGame() {
   gameIdx++;
-  if (gameIdx >= GAMES.length) {
+  if (gameIdx >= activeGames.length) {
     showFinal();
   } else {
     showBriefing();
@@ -1112,7 +1158,7 @@ function showFinal() {
 
   // Full scores table
   document.getElementById('final-scores').innerHTML = sorted.map((p, i) => {
-    const breakdown = GAMES.map((g,gi) =>
+    const breakdown = activeGames.map((g,gi) =>
       `${g.emoji}${p.scores[gi]}`
     ).join(' · ');
     return `
@@ -1181,9 +1227,12 @@ function launchConfetti() {
 // ════════════════════════════════════════════════════════
 function resetTournament() {
   clearSession();
+  activeGames = [...GAMES];
   players.forEach(p => { p.rawScores = [0,0,0,0]; p.scores = [0,0,0,0]; p.total = 0; });
   window._tournamentActive = false;
   gameIdx = 0; playerIdx = 0;
+  // Re-select all game cards
+  document.querySelectorAll('.gp-card').forEach(c => c.classList.add('selected'));
   renderPlayerList();
   showScreen('screen-reg');
 }
@@ -1205,6 +1254,11 @@ window.addEventListener('message', e => {
 function resumeTournament() {
   const data = loadSession();
   if (!data) { showScreen('screen-reg'); return; }
+
+  // Restore active games from saved IDs
+  if (data.activeGameIds) {
+    activeGames = data.activeGameIds.map(id => GAMES.find(g => g.id === id)).filter(Boolean);
+  }
 
   // Restore state
   players   = data.players.map(p => ({
@@ -1240,9 +1294,13 @@ function discardAndRestart() {
 // Boot: check for existing session
 const _savedSession = loadSession();
 if (_savedSession) {
-  const gName = GAMES[_savedSession.gameIdx]?.name || '';
+  const savedGames = _savedSession.activeGameIds
+    ? _savedSession.activeGameIds.map(id => GAMES.find(g => g.id === id)).filter(Boolean)
+    : GAMES;
+  const gName = savedGames[_savedSession.gameIdx]?.name || '';
+  const totalG = savedGames.length;
   document.getElementById('recover-info').textContent =
-    `${_savedSession.players.length} שחקנים · ${gName} (משחק ${_savedSession.gameIdx + 1} מתוך 4)`;
+    `${_savedSession.players.length} שחקנים · ${gName} (משחק ${_savedSession.gameIdx + 1} מתוך ${totalG})`;
   showScreen('screen-recover');
 } else {
   _playAnthem();
