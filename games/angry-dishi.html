@@ -165,10 +165,13 @@ const launchSound = document.getElementById('launchSound');
 launchSound.volume = 0.8;
 
 // ─── Physics constants ───────────────────
-const GRAVITY = 0.35;
-const GROUND_FRICTION = 0.7;
-const BOUNCE_DAMPING = 0.4;
+const GRAVITY = 0.32;
+const AIR_DRAG = 0.997;       // velocity multiplier per frame — slows bird over distance
+const WIND_DRIFT = -0.012;    // slight leftward wind for realism
+const GROUND_FRICTION = 0.6;
+const BOUNCE_DAMPING = 0.3;
 const BLOCK_FRICTION = 0.85;
+const SPIN_DRAG = 0.98;       // rotation slows down
 
 // ─── Game state ──────────────────────────
 let currentLevel = 0;
@@ -190,7 +193,7 @@ let aimX = 0, aimY = 0;
 
 // ─── Bird (projectile) ──────────────────
 let bird = null;
-const BIRD_R = 22;
+const BIRD_R = 18;
 
 // ─── Blocks & Enemies ───────────────────
 let blocks = [];
@@ -200,8 +203,8 @@ let debris = [];
 
 // ─── Block types ─────────────────────────
 const BLOCK_TYPES = {
-  wood:  { color: '#8B6914', dark: '#6B4F10', hp: 2, density: 1 },
-  stone: { color: '#888', dark: '#666', hp: 4, density: 2 },
+  wood:  { color: '#8B6914', dark: '#6B4F10', hp: 3, density: 1 },
+  stone: { color: '#888', dark: '#666', hp: 6, density: 2 },
   glass: { color: '#88CCEE', dark: '#66AACC', hp: 1, density: 0.5 },
 };
 
@@ -213,6 +216,7 @@ const ENEMY_TYPES = [
   { emoji: '💩', name: 'קקי סטיק', points: 150 },
   { emoji: '🪣', name: 'דלי מלוכלך', points: 130 },
 ];
+const ENEMY_R = 13; // smaller hit radius — harder to hit
 
 // ═══════════════════════════════════════════
 //  LEVELS (10 total)
@@ -227,7 +231,7 @@ function generateLevels() {
   // Helper: create enemy
   function E(x, y, typeIdx = 0) {
     const t = ENEMY_TYPES[typeIdx % ENEMY_TYPES.length];
-    return { x, y, r: 16, ...t, alive: true, vx: 0, vy: 0 };
+    return { x, y, r: ENEMY_R, ...t, alive: true, vx: 0, vy: 0 };
   }
 
   // Scale positions relative to canvas
@@ -563,17 +567,22 @@ function drawParticles() {
 function drawTrajectory() {
   if (!isDragging) return;
   const sx = SLING_X(), sy = SLING_Y() - 55;
-  const power = 0.18;
+  const power = 0.15;
   let vx = (sx - dragX) * power;
   let vy = (sy - dragY) * power;
   let px = sx, py = sy - 55;
 
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  for (let i = 0; i < 30; i++) {
-    px += vx; py += vy; vy += GRAVITY;
+  // Show only first few dots — don't reveal full path (adds skill requirement)
+  for (let i = 0; i < 18; i++) {
+    px += vx; py += vy;
+    vy += GRAVITY;
+    vx *= AIR_DRAG; vy *= AIR_DRAG;
+    vx += WIND_DRIFT;
     if (py > H() - 60) break;
     if (i % 3 === 0) {
-      ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI*2); ctx.fill();
+      const fade = 1 - i / 18;
+      ctx.fillStyle = `rgba(255,255,255,${0.5 * fade})`;
+      ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2); ctx.fill();
     }
   }
 }
@@ -592,10 +601,19 @@ function drawBirdQueue() {
 // ═══════════════════════════════════════════
 function updateBird() {
   if (!bird || gamePhase !== 'FLYING') return;
+
+  // Aerodynamics: gravity + air drag + wind
   bird.vy += GRAVITY;
+  bird.vx *= AIR_DRAG;
+  bird.vy *= AIR_DRAG;
+  bird.vx += WIND_DRIFT;        // slight wind pushback
+  bird.va *= SPIN_DRAG;         // spin slows down
+
   bird.x += bird.vx;
   bird.y += bird.vy;
-  bird.angle += bird.va;
+
+  // Rotation follows velocity direction (aerodynamic tilt)
+  bird.angle = Math.atan2(bird.vy, bird.vx);
 
   const groundY = H() - 60 - BIRD_R;
   if (bird.y > groundY) {
@@ -603,16 +621,18 @@ function updateBird() {
     bird.vy *= -BOUNCE_DAMPING;
     bird.vx *= GROUND_FRICTION;
     if (Math.abs(bird.vy) < 1) bird.vy = 0;
-    if (Math.abs(bird.vx) < 0.5) bird.vx = 0;
+    if (Math.abs(bird.vx) < 0.3) bird.vx = 0;
   }
   // Walls
   if (bird.x < BIRD_R) { bird.x = BIRD_R; bird.vx *= -0.3; }
   if (bird.x > W() - BIRD_R) { bird.x = W() - BIRD_R; bird.vx *= -0.3; }
 
-  // Check if bird stopped
-  if (Math.abs(bird.vx) < 0.3 && Math.abs(bird.vy) < 0.3 && bird.y >= groundY - 1) {
+  // Check if bird stopped or flew off screen
+  const stopped = Math.abs(bird.vx) < 0.2 && Math.abs(bird.vy) < 0.2 && bird.y >= groundY - 1;
+  const offScreen = bird.x > W() + 50 || bird.y > H() + 50;
+  if (stopped || offScreen) {
     gamePhase = 'SETTLING';
-    settleTimer = 40;
+    settleTimer = 35;
   }
 }
 
@@ -623,15 +643,17 @@ function checkCollisions() {
   blocks.forEach(b => {
     if (rectCircleCollision(b, bird)) {
       const speed = Math.sqrt(bird.vx*bird.vx + bird.vy*bird.vy);
-      const damage = Math.ceil(speed / 3);
-      b.hp -= damage;
-      // Push block
-      b.vx = bird.vx * 0.4;
-      b.vy = bird.vy * 0.3;
-      b.va = (Math.random() - 0.5) * 0.1;
-      // Bounce bird
-      bird.vx *= -0.3;
-      bird.vy *= -0.3;
+      // Minimum impact speed required to do damage
+      const damage = speed > 3 ? Math.ceil((speed - 2) / 4) : 0;
+      b.hp -= Math.max(damage, speed > 2 ? 1 : 0);
+      // Push block proportional to impact
+      const pushFactor = Math.min(speed / 10, 0.5);
+      b.vx = bird.vx * pushFactor;
+      b.vy = bird.vy * pushFactor * 0.7;
+      b.va = (Math.random() - 0.5) * 0.08;
+      // Bird loses most energy on impact
+      bird.vx *= -0.2;
+      bird.vy *= -0.2;
 
       if (b.hp <= 0) {
         levelScore += 50;
@@ -753,13 +775,13 @@ function spawnDebris(b) {
 function launchBird() {
   if (birdsLeft <= 0 || gamePhase !== 'AIM') return;
   const sx = SLING_X(), sy = SLING_Y() - 55;
-  const power = 0.18;
+  const power = 0.15;  // reduced — need precise aim
 
   bird = {
     x: dragX, y: dragY,
     vx: (sx - dragX) * power,
     vy: (sy - dragY) * power,
-    angle: 0, va: 0.05,
+    angle: 0, va: 0,
   };
   birdsLeft--;
   gamePhase = 'FLYING';
