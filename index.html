@@ -691,11 +691,10 @@
         <div class="card-name">תשחץ דישי</div>
         <div class="card-sub">מציאת מילים</div>
       </div>
-      <div class="game-card locked">
-        <span class="coming-tag">בקרוב</span>
-        <span class="card-icon">🔥</span>
-        <div class="card-name">דישי הכבאי</div>
-        <div class="card-sub">בקרוב...</div>
+      <div class="game-card" style="--card-glow:0 0 20px rgba(255,60,30,0.2)" onclick="openGame('angry-dishi','Angry Dishi')">
+        <span class="card-icon">💥</span>
+        <div class="card-name">Angry Dishi</div>
+        <div class="card-sub">השמד כלים מלוכלכים</div>
       </div>
     </div>
   </div>
@@ -707,6 +706,7 @@
       <button class="lb-tab" onclick="switchLbTab('dishi-hangman',this)">🔤 דיש תלוי</button>
       <button class="lb-tab" onclick="switchLbTab('candy-dishi',this)">🍬 קנדישי</button>
       <button class="lb-tab" onclick="switchLbTab('dishi-wordsearch',this)">🔍 תשחץ דישי</button>
+      <button class="lb-tab" onclick="switchLbTab('angry-dishi',this)">💥 Angry Dishi</button>
     </div>
     <div class="podium" id="podium"></div>
     <div class="lb-rest" id="lbRest"></div>
@@ -903,6 +903,7 @@ const GAMES = [
   { id:'dishi-hangman',   icon:'🔤', name:'דיש תלוי'    },
   { id:'candy-dishi',     icon:'🍬', name:'קנדישי'       },
   { id:'dishi-wordsearch',icon:'🔍', name:'תשחץ דישי'   },
+  { id:'angry-dishi',    icon:'💥', name:'Angry Dishi'  },
 ];
 
 /* ── Auth ── */

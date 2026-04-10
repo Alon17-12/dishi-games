@@ -11,6 +11,7 @@ const MAX_SCORES = {
   'dishi-hangman': 5000,
   'candy-dishi': 15000,
   'dishi-wordsearch': 10000,
+  'angry-dishi': 50000,
 };
 
 // gameId: "flying-dishi" | "dishi-hangman" | "candy-dishi" | "dishi-wordsearch"
